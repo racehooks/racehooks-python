@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "racehooks"
+version = "0.1.0"
+description = "Official RaceHooks client library — F1 live timing webhook signature verification and typed event models."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "RaceHooks", email = "contact@racehooks-ai.com" }]
+keywords = ["racehooks", "f1", "formula1", "webhook", "hmac", "live-timing", "signalr"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+    "Typing :: Typed",
+]
+dependencies = [
+    "pydantic>=2.0,<3.0",
+]
+
+[project.urls]
+Homepage = "https://racehooks-ai.com"
+Repository = "https://github.com/racehooks/racehooks-python"
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "flask>=2.0",
+    "fastapi>=0.100",
+    "httpx>=0.24",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["racehooks"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
