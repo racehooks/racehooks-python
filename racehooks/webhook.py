@@ -69,8 +69,9 @@ def verify_signature(
     :param secret: The webhook signing secret.
     :param timestamp: The ``X-RaceHooks-Sent-At`` header (epoch ms). Required
         when ``tolerance_seconds`` is set.
-    :param tolerance_seconds: If set, reject deliveries older than this many
-        seconds (replay protection).
+    :param tolerance_seconds: If set to a positive integer, reject deliveries
+        older than this many seconds (replay protection). ``None`` or ``0``
+        disables the check (default behaviour when no tolerance is configured).
     :returns: ``True`` on success.
     :raises WebhookSignatureError: if the signature is missing or invalid.
     :raises WebhookTimestampError: if the delivery is too old.
@@ -93,7 +94,7 @@ def verify_signature(
             "Signature mismatch — payload may be tampered or secret is wrong"
         )
 
-    if tolerance_seconds and tolerance_seconds > 0:
+    if tolerance_seconds is not None and tolerance_seconds > 0:
         if timestamp is None or timestamp == "":
             raise WebhookTimestampError(
                 "Timestamp required for replay protection but none provided"

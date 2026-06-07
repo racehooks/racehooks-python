@@ -48,8 +48,6 @@ class RaceEvent(WebhookEvent):
     lap: int = 0
     utc: Optional[str] = None
 
-    model_config = ConfigDict(extra="allow", populate_by_name=True)
-
 
 class SessionTimingEvent(WebhookEvent):
     """``sessiontiming`` — normalized session-timing snapshot.
@@ -65,15 +63,11 @@ class SessionTimingEvent(WebhookEvent):
     total_laps: Optional[int] = Field(default=None, alias="totalLaps")
     track_status: Optional[str] = Field(default=None, alias="trackStatus")
 
-    model_config = ConfigDict(extra="allow", populate_by_name=True)
-
 
 class RaceSummaryEvent(WebhookEvent):
     """``racesummary`` — post-race telemetry summary."""
 
     type: str = "racesummary"
-
-    model_config = ConfigDict(extra="allow", populate_by_name=True)
 
 
 # Feed slugs that get a dedicated envelope model. Everything else is parsed
@@ -87,7 +81,7 @@ _EVENT_MODELS: Dict[str, type[WebhookEvent]] = {
 AnyEvent = Union[RaceEvent, SessionTimingEvent, RaceSummaryEvent, WebhookEvent]
 
 
-def parse_event(payload: Union[str, bytes, Dict[str, Any]]) -> AnyEvent:
+def parse_event(payload: Union[str, bytes, bytearray, Dict[str, Any]]) -> AnyEvent:
     """Parse a raw webhook payload into the most specific event model.
 
     :param payload: Raw JSON ``str``/``bytes`` or an already-decoded ``dict``.
