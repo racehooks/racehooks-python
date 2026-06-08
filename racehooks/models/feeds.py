@@ -1,11 +1,9 @@
-"""Pydantic models for RaceHooks F1 live-timing feed payloads.
+"""Pydantic models for RaceHooks feed webhook payloads.
 
-These mirror the raw F1 SignalR feed shapes delivered inside the
-``data`` field of a webhook envelope. All numeric values arrive as
-strings in the raw F1 feed, matching ``@racehooks/f1-telemetry-schema``.
-
-Every model permits extra fields (``extra="allow"``) so that new feed
-fields added upstream never break parsing.
+Each model corresponds to the ``data`` field of a RaceHooks webhook
+envelope for a specific feed type. Numeric values are delivered as
+strings. All models permit extra fields (``extra="allow"``) so that
+new fields never break parsing.
 """
 
 from __future__ import annotations
