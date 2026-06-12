@@ -9,7 +9,7 @@ description = "Official RaceHooks client library — F1 live timing webhook sign
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
-authors = [{ name = "RaceHooks", email = "contact@racehooks-ai.com" }]
+authors = [{ name = "RaceHooks", email = "contact@racehooks.io" }]
 keywords = ["racehooks", "f1", "formula1", "webhook", "hmac", "live-timing", "signalr"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -28,7 +28,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://racehooks-ai.com"
+Homepage = "https://racehooks.io"
 Repository = "https://github.com/racehooks/racehooks-python"
 
 [project.optional-dependencies]

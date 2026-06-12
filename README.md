@@ -1,8 +1,10 @@
 # racehooks
 
-Official [RaceHooks](https://racehooks-ai.com) client library for Python — verify F1 live-timing webhooks and work with typed event models.
+Official [RaceHooks](https://racehooks.io) client library for Python — verify F1 live-timing webhooks and work with typed event models.
 
 RaceHooks pushes Formula 1 live timing events to your webhook endpoint. Each delivery is signed with HMAC-SHA256 so you can confirm it really came from RaceHooks and wasn't tampered with in transit. This library verifies those signatures and parses deliveries into Pydantic v2 models.
+
+> RaceHooks is an independent service and is not affiliated with or endorsed by Formula One Management or the FIA. "Formula 1," "F1," and related marks are trademarks of Formula One Licensing BV.
 
 ## Install
 
@@ -45,9 +47,9 @@ def webhook():
     except WebhookSignatureError as exc:
         return {"error": str(exc)}, 400
 
-    if event.type == "raceevent":
+    if event.feed == "raceevent":
         print(event.event, "on lap", event.lap, event.data)
-    elif event.type == "weatherdata":
+    elif event.feed == "weatherdata":
         print("air temp", event.data["AirTemp"])
 
     return {"received": True}, 200
@@ -74,7 +76,7 @@ async def webhook(request: Request):
         )
     except WebhookSignatureError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
-    return {"received": True, "type": event.type}
+    return {"received": True, "feed": event.feed}
 ```
 
 ### Manual verification
@@ -109,14 +111,14 @@ Pass the timestamp header through to `construct_event` / `verify_signature`
 
 `construct_event` / `parse_event` return the most specific model for the feed:
 
-| `event.type` | model | extra envelope fields |
+| `event.feed` | model | extra envelope fields |
 |---|---|---|
 | `raceevent` | `RaceEvent` | `event`, `lap`, `utc` |
 | `sessiontiming` | `SessionTimingEvent` | `utc`, `lap`, `total_laps`, `track_status` |
 | `racesummary` | `RaceSummaryEvent` | — |
 | anything else | `WebhookEvent` | — |
 
-All envelopes expose `type`, `session_id`, and `data`. Feed data models
+All envelopes expose `feed`, `session_id`, and `data`. Feed data models
 (`WeatherData`, `TrackStatus`, `LapCount`, `DriverEntry`, …) are available for
 validating the `data` payload and tolerate unknown fields for forward
 compatibility:

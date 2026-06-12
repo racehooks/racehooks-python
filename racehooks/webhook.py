@@ -127,7 +127,7 @@ class WebhookHandler:
                 request.headers.get("X-RaceHooks-Signature"),
                 timestamp=request.headers.get("X-RaceHooks-Sent-At"),
             )
-            if event.type == "raceevent":
+            if event.feed == "raceevent":
                 print(event.event, event.data)
     """
 
@@ -184,7 +184,7 @@ class AsyncWebhookHandler(WebhookHandler):
                 request.headers.get("X-RaceHooks-Signature"),
                 timestamp=request.headers.get("X-RaceHooks-Sent-At"),
             )
-            return {"received": True, "type": event.type}
+            return {"received": True, "feed": event.feed}
     """
 
     async def construct_event(  # type: ignore[override]

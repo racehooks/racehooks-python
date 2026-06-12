@@ -20,7 +20,7 @@ SECRET = "whsec_test_0123456789abcdef0123456789abcdef"
 
 WEATHER_PAYLOAD = json.dumps(
     {
-        "type": "weatherdata",
+        "feed": "weatherdata",
         "sessionId": "2026-bahrain-r1",
         "data": {"AirTemp": "24.1", "TrackTemp": "31.0", "Rainfall": "0"},
     }
@@ -138,7 +138,7 @@ def test_handler_construct_event_returns_typed_event():
     handler = WebhookHandler(secret=SECRET)
     sig = server_sign(SECRET, WEATHER_PAYLOAD)
     event = handler.construct_event(WEATHER_PAYLOAD, sig)
-    assert event.type == "weatherdata"
+    assert event.feed == "weatherdata"
     assert event.session_id == "2026-bahrain-r1"
     assert event.data["AirTemp"] == "24.1"
 
@@ -147,7 +147,7 @@ def test_handler_construct_raceevent():
     handler = WebhookHandler(secret=SECRET)
     body = json.dumps(
         {
-            "type": "raceevent",
+            "feed": "raceevent",
             "sessionId": "2026-bahrain-r1",
             "event": "safety.car.deployed",
             "lap": 12,
@@ -157,7 +157,7 @@ def test_handler_construct_raceevent():
     )
     sig = server_sign(SECRET, body)
     event = handler.construct_event(body, sig)
-    assert event.type == "raceevent"
+    assert event.feed == "raceevent"
     assert event.event == "safety.car.deployed"
     assert event.lap == 12
 
@@ -181,7 +181,7 @@ async def test_async_handler_construct_event():
     handler = AsyncWebhookHandler(secret=SECRET)
     sig = server_sign(SECRET, WEATHER_PAYLOAD)
     event = await handler.construct_event(WEATHER_PAYLOAD.encode(), sig)
-    assert event.type == "weatherdata"
+    assert event.feed == "weatherdata"
 
 
 @pytest.mark.asyncio
@@ -228,7 +228,7 @@ def test_flask_integration():
     )
     assert ok.status_code == 200
     assert ok.get_json()["received"] is True
-    assert received["event"].type == "weatherdata"
+    assert received["event"].feed == "weatherdata"
 
     bad = client.post(
         "/webhook",
@@ -265,7 +265,7 @@ def test_fastapi_integration():
             )
         except WebhookSignatureError as exc:
             return JSONResponse({"error": str(exc)}, status_code=400)
-        return {"received": True, "type": event.type}
+        return {"received": True, "feed": event.feed}
 
     client = TestClient(app)
     sig = server_sign(SECRET, WEATHER_PAYLOAD)
@@ -276,7 +276,7 @@ def test_fastapi_integration():
         headers={"X-RaceHooks-Signature": sig},
     )
     assert ok.status_code == 200
-    assert ok.json() == {"received": True, "type": "weatherdata"}
+    assert ok.json() == {"received": True, "feed": "weatherdata"}
 
     bad = client.post(
         "/webhook",

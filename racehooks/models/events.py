@@ -1,13 +1,13 @@
 """Pydantic v2 models for RaceHooks webhook event envelopes.
 
 Every webhook RaceHooks delivers is a JSON object with a common envelope.
-The ``type`` field is the feed slug; the shape of ``data`` depends on it.
+The ``feed`` field is the feed slug; the shape of ``data`` depends on it.
 
 Envelope shapes mirror the server (see ``feedHandlers.ts``):
 
-* Generic feeds: ``{ type, sessionId, data }``
-* ``raceevent``:  ``{ type, sessionId, event, lap, utc, data }``
-* ``sessiontiming``: ``{ type, sessionId, utc, ...trackerFields }``
+* Generic feeds: ``{ feed, sessionId, data }``
+* ``raceevent``:  ``{ feed, sessionId, event, lap, utc, data }``
+* ``sessiontiming``: ``{ feed, sessionId, utc, ...trackerFields }``
 
 :func:`parse_event` deserializes a raw payload into the most specific model,
 falling back to :class:`WebhookEvent` for feeds without a dedicated class.
@@ -25,11 +25,12 @@ class WebhookEvent(BaseModel):
     """Base envelope shared by every RaceHooks webhook delivery.
 
     Generic feeds (``timingdata``, ``cardata``, ``position`` …) use exactly
-    this shape: ``{ type, sessionId, data }``. ``data`` is kept as a raw
+    this shape: ``{ feed, sessionId, data }``. ``data`` is kept as a raw
     value so callers can index into it for feeds without a typed model.
+    Per-driver feeds (``timingdata``) may use ``drivers`` instead of ``data``.
     """
 
-    type: str
+    feed: str
     session_id: Optional[str] = Field(default=None, alias="sessionId")
     data: Any = None
 
@@ -43,7 +44,7 @@ class RaceEvent(WebhookEvent):
     name such as ``"safety.car.deployed"``), ``lap``, and ``utc``.
     """
 
-    type: str = "raceevent"
+    feed: str = "raceevent"
     event: str
     lap: int = 0
     utc: Optional[str] = None
@@ -57,7 +58,7 @@ class SessionTimingEvent(WebhookEvent):
     thanks to ``extra="allow"``.
     """
 
-    type: str = "sessiontiming"
+    feed: str = "sessiontiming"
     utc: Optional[str] = None
     lap: Optional[int] = None
     total_laps: Optional[int] = Field(default=None, alias="totalLaps")
@@ -67,7 +68,7 @@ class SessionTimingEvent(WebhookEvent):
 class RaceSummaryEvent(WebhookEvent):
     """``racesummary`` — post-race telemetry summary."""
 
-    type: str = "racesummary"
+    feed: str = "racesummary"
 
 
 # Feed slugs that get a dedicated envelope model. Everything else is parsed
@@ -96,7 +97,7 @@ def parse_event(payload: Union[str, bytes, bytearray, Dict[str, Any]]) -> AnyEve
     if not isinstance(data, dict):
         raise ValueError("Webhook payload must be a JSON object")
 
-    event_type = data.get("type", "")
+    event_type = data.get("feed", "")
     model = _EVENT_MODELS.get(event_type, WebhookEvent)
     return model.model_validate(data)
 

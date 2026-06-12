@@ -18,21 +18,21 @@ from racehooks import (
 def test_parse_generic_feed_event():
     payload = json.dumps(
         {
-            "type": "weatherdata",
+            "feed": "weatherdata",
             "sessionId": "s1",
             "data": {"AirTemp": "24.1"},
         }
     )
     event = parse_event(payload)
     assert isinstance(event, WebhookEvent)
-    assert event.type == "weatherdata"
+    assert event.feed == "weatherdata"
     assert event.session_id == "s1"
     assert event.data["AirTemp"] == "24.1"
 
 
 def test_parse_raceevent_specializes():
     payload = {
-        "type": "raceevent",
+        "feed": "raceevent",
         "sessionId": "s1",
         "event": "overtake",
         "lap": 5,
@@ -48,7 +48,7 @@ def test_parse_raceevent_specializes():
 
 def test_parse_sessiontiming_specializes():
     payload = {
-        "type": "sessiontiming",
+        "feed": "sessiontiming",
         "sessionId": "s1",
         "utc": "2026-03-16T15:00:00Z",
         "lap": 3,
@@ -66,8 +66,8 @@ def test_parse_sessiontiming_specializes():
 
 
 def test_parse_event_accepts_bytes():
-    event = parse_event(b'{"type":"trackstatus","sessionId":null,"data":{"Status":"1"}}')
-    assert event.type == "trackstatus"
+    event = parse_event(b'{"feed":"trackstatus","sessionId":null,"data":{"Status":"1"}}')
+    assert event.feed == "trackstatus"
     assert event.session_id is None
 
 
@@ -100,6 +100,6 @@ def test_lap_count_model_coerces_ints():
 
 def test_raceevent_defaults_lap_to_zero():
     event = RaceEvent.model_validate(
-        {"type": "raceevent", "sessionId": "s1", "event": "session.start", "data": {}}
+        {"feed": "raceevent", "sessionId": "s1", "event": "session.start", "data": {}}
     )
     assert event.lap == 0

@@ -7,7 +7,7 @@ event models.
 
     handler = WebhookHandler(secret="whsec_...")
     event = handler.construct_event(raw_body, signature_header)
-    if event.type == "raceevent":
+    if event.feed == "raceevent":
         print(event.event, event.data)
 """
 
