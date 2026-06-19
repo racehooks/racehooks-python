@@ -102,6 +102,130 @@ class RaceControlMessages(_Feed):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
 
+class AnalyticsStrategy(_Feed):
+    """``analytics.strategy`` — per-lap strategy signals (race/sprint only).
+
+    Delivered once per lap for every driver. Fires independently of timingdata.
+    """
+
+    feed: str = "analytics.strategy"
+    session_id: Optional[str] = Field(default=None, alias="sessionId")
+    race_id: Optional[str] = Field(default=None, alias="raceId")
+    lap: Optional[int] = None
+    utc: Optional[str] = None
+    regulations_era: Optional[str] = Field(default=None, alias="regulationsEra")
+    safety_car_probability: Optional[float] = Field(default=None, alias="safetyCarProbability")
+    drivers: Optional[List[Any]] = None
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+
+class AnalyticsRaceOdds(_Feed):
+    """``analytics.race-odds`` — per-lap CTMC outcome probabilities (race/sprint only).
+
+    Includes per-driver positionDistribution, podium/points odds, H2H vs teammate,
+    and a top-level ``pairs`` array with same-constructor H2H probabilities.
+    """
+
+    feed: str = "analytics.race-odds"
+    session_id: Optional[str] = Field(default=None, alias="sessionId")
+    race_id: Optional[str] = Field(default=None, alias="raceId")
+    lap: Optional[int] = None
+    utc: Optional[str] = None
+    regulations_era: Optional[str] = Field(default=None, alias="regulationsEra")
+    drivers: Optional[List[Any]] = None
+    pairs: Optional[List[Any]] = None
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+
+class AnalyticsGapProjection(_Feed):
+    """``analytics.gap-projection`` — Monte Carlo projected gap to race leader.
+
+    Five percentile bands (p10–p90) plus P(lapped) per driver. Race/sprint only.
+    """
+
+    feed: str = "analytics.gap-projection"
+    session_id: Optional[str] = Field(default=None, alias="sessionId")
+    race_id: Optional[str] = Field(default=None, alias="raceId")
+    lap: Optional[int] = None
+    utc: Optional[str] = None
+    regulations_era: Optional[str] = Field(default=None, alias="regulationsEra")
+    drivers: Optional[List[Any]] = None
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+
+class AnalyticsTireStrategy(_Feed):
+    """``analytics.tire-strategy`` — next-compound probabilities.
+
+    Sparse — fires only for drivers whose pitStopProbability exceeds the
+    approach threshold (~0.25). Includes compound probability distribution.
+    """
+
+    feed: str = "analytics.tire-strategy"
+    session_id: Optional[str] = Field(default=None, alias="sessionId")
+    race_id: Optional[str] = Field(default=None, alias="raceId")
+    lap: Optional[int] = None
+    utc: Optional[str] = None
+    regulations_era: Optional[str] = Field(default=None, alias="regulationsEra")
+    drivers: Optional[List[Any]] = None
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+
+class AnalyticsConstructor(_Feed):
+    """``analytics.constructor`` — constructor-level expected points (race/sprint only).
+
+    Computed from discrete joint position distribution convolution across both drivers.
+    """
+
+    feed: str = "analytics.constructor"
+    session_id: Optional[str] = Field(default=None, alias="sessionId")
+    race_id: Optional[str] = Field(default=None, alias="raceId")
+    lap: Optional[int] = None
+    utc: Optional[str] = None
+    regulations_era: Optional[str] = Field(default=None, alias="regulationsEra")
+    constructors: Optional[List[Any]] = None
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+
+class AnalyticsChampionshipProbability(_Feed):
+    """``analytics.championship-probability`` — post-race WDC win probability.
+
+    Delivered once after each race when the post-race inference pipeline completes.
+    ``after_race_id`` identifies which race triggered the computation.
+    """
+
+    feed: str = "analytics.championship-probability"
+    session_id: Optional[str] = Field(default=None, alias="sessionId")
+    race_id: Optional[str] = Field(default=None, alias="raceId")
+    after_race_id: Optional[str] = Field(default=None, alias="afterRaceId")
+    utc: Optional[str] = None
+    drivers: Optional[List[Any]] = None
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+
+class AnalyticsQualifying(_Feed):
+    """``analytics.qualifying`` — per-lap-improvement qualifying intelligence.
+
+    Fires after each personal best lap during qualifying. Includes per-sector
+    fastest probabilities, pole probability, and pace deltas vs session best.
+    """
+
+    feed: str = "analytics.qualifying"
+    session_id: Optional[str] = Field(default=None, alias="sessionId")
+    race_id: Optional[str] = Field(default=None, alias="raceId")
+    lap: Optional[int] = None
+    utc: Optional[str] = None
+    sectors: Optional[Any] = None
+    drivers: Optional[List[Any]] = None
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+
 __all__ = [
     "WeatherData",
     "TrackStatus",
@@ -112,4 +236,11 @@ __all__ = [
     "TimingData",
     "CurrentTyres",
     "RaceControlMessages",
+    "AnalyticsStrategy",
+    "AnalyticsRaceOdds",
+    "AnalyticsGapProjection",
+    "AnalyticsTireStrategy",
+    "AnalyticsConstructor",
+    "AnalyticsChampionshipProbability",
+    "AnalyticsQualifying",
 ]

@@ -8,6 +8,10 @@ Envelope shapes mirror the server (see ``feedHandlers.ts``):
 * Generic feeds: ``{ feed, sessionId, data }``
 * ``raceevent``:  ``{ feed, sessionId, event, lap, utc, data }``
 * ``sessiontiming``: ``{ feed, sessionId, utc, ...trackerFields }``
+* Analytics feeds: ``{ feed, sessionId, raceId, lap, utc, drivers/constructors/... }``
+  (``analytics.strategy``, ``analytics.race-odds``, ``analytics.gap-projection``,
+  ``analytics.tire-strategy``, ``analytics.constructor``,
+  ``analytics.championship-probability``, ``analytics.qualifying``)
 
 :func:`parse_event` deserializes a raw payload into the most specific model,
 falling back to :class:`WebhookEvent` for feeds without a dedicated class.
@@ -19,6 +23,15 @@ import json
 from typing import Any, Dict, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
+from racehooks.models.feeds import (
+    AnalyticsStrategy,
+    AnalyticsRaceOdds,
+    AnalyticsGapProjection,
+    AnalyticsTireStrategy,
+    AnalyticsConstructor,
+    AnalyticsChampionshipProbability,
+    AnalyticsQualifying,
+)
 
 
 class WebhookEvent(BaseModel):
@@ -73,13 +86,32 @@ class RaceSummaryEvent(WebhookEvent):
 
 # Feed slugs that get a dedicated envelope model. Everything else is parsed
 # as the generic :class:`WebhookEvent`.
-_EVENT_MODELS: Dict[str, type[WebhookEvent]] = {
-    "raceevent": RaceEvent,
-    "sessiontiming": SessionTimingEvent,
-    "racesummary": RaceSummaryEvent,
+_EVENT_MODELS: Dict[str, Any] = {
+    "raceevent":                         RaceEvent,
+    "sessiontiming":                     SessionTimingEvent,
+    "racesummary":                       RaceSummaryEvent,
+    "analytics.strategy":                AnalyticsStrategy,
+    "analytics.race-odds":               AnalyticsRaceOdds,
+    "analytics.gap-projection":          AnalyticsGapProjection,
+    "analytics.tire-strategy":           AnalyticsTireStrategy,
+    "analytics.constructor":             AnalyticsConstructor,
+    "analytics.championship-probability": AnalyticsChampionshipProbability,
+    "analytics.qualifying":              AnalyticsQualifying,
 }
 
-AnyEvent = Union[RaceEvent, SessionTimingEvent, RaceSummaryEvent, WebhookEvent]
+AnyEvent = Union[
+    RaceEvent,
+    SessionTimingEvent,
+    RaceSummaryEvent,
+    AnalyticsStrategy,
+    AnalyticsRaceOdds,
+    AnalyticsGapProjection,
+    AnalyticsTireStrategy,
+    AnalyticsConstructor,
+    AnalyticsChampionshipProbability,
+    AnalyticsQualifying,
+    WebhookEvent,
+]
 
 
 def parse_event(payload: Union[str, bytes, bytearray, Dict[str, Any]]) -> AnyEvent:
@@ -109,4 +141,11 @@ __all__ = [
     "RaceSummaryEvent",
     "AnyEvent",
     "parse_event",
+    "AnalyticsStrategy",
+    "AnalyticsRaceOdds",
+    "AnalyticsGapProjection",
+    "AnalyticsTireStrategy",
+    "AnalyticsConstructor",
+    "AnalyticsChampionshipProbability",
+    "AnalyticsQualifying",
 ]
