@@ -226,6 +226,185 @@ class AnalyticsQualifying(_Feed):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
 
+class AnalyticsSectorPace(_Feed):
+    """``analytics.sector-pace`` — per-driver sector anomaly detection (race/sprint).
+
+    ``data`` is a SectorPaceSnapshot: per-sector deltas vs clean-lap baseline,
+    anomaly flags, classified cause (RAIN/TIRE_CLIFF/INCIDENT), cross-driver correlation.
+    """
+
+    feed: str = "analytics.sector-pace"
+    session_id: Optional[str] = Field(default=None, alias="sessionId")
+    lap: Optional[int] = None
+    utc: Optional[str] = None
+    data: Optional[Any] = None
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+
+class AnalyticsBattle(_Feed):
+    """``analytics.battle`` — head-to-head battle tracking (race/sprint).
+
+    ``data`` is a BattleState: attacker/defender, gap, catch rate, laps to striking
+    distance, and battleStatus (APPROACHING/STRIKING_RANGE/EQUAL_PACE/PULLING_AWAY).
+    """
+
+    feed: str = "analytics.battle"
+    session_id: Optional[str] = Field(default=None, alias="sessionId")
+    lap: Optional[int] = None
+    utc: Optional[str] = None
+    data: Optional[Any] = None
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+
+class AnalyticsPitWindow(_Feed):
+    """``analytics.pit-window`` — per-driver optimal pit window (race/sprint).
+
+    ``data`` is a PitWindowAlert plus ``pitCount``: status (OPEN/URGENT/CLOSING/CLOSED),
+    pit probability, undercut viability, cliff risk, VSC/SC override reason.
+    """
+
+    feed: str = "analytics.pit-window"
+    session_id: Optional[str] = Field(default=None, alias="sessionId")
+    lap: Optional[int] = None
+    utc: Optional[str] = None
+    data: Optional[Any] = None
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+
+class AnalyticsTrackConditions(_Feed):
+    """``analytics.track-conditions`` — per-sector wet/dry state (race/sprint).
+
+    ``data`` is a SectorConditions: per-sector DRY/WET/DRYING, full-circuit-wet flag,
+    intermediate-window-open, and crossover recommendation.
+    """
+
+    feed: str = "analytics.track-conditions"
+    session_id: Optional[str] = Field(default=None, alias="sessionId")
+    lap: Optional[int] = None
+    utc: Optional[str] = None
+    data: Optional[Any] = None
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+
+class AnalyticsPitQuality(_Feed):
+    """``analytics.pit-quality`` — per-stop pit crew performance (race/sprint).
+
+    ``data`` is a PitQualityAlert: stationary time, team session average, delta,
+    and quality grade (EXCEPTIONAL/NORMAL/SLOW/CRITICAL).
+    """
+
+    feed: str = "analytics.pit-quality"
+    session_id: Optional[str] = Field(default=None, alias="sessionId")
+    lap: Optional[int] = None
+    utc: Optional[str] = None
+    data: Optional[Any] = None
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+
+class WeatherRainEvent(_Feed):
+    """``weather.rain_onset`` / ``weather.rain_cleared`` — rain state-machine events.
+
+    ``data`` is a WeatherEvent: precip rate, rain start lap + duration (on clear),
+    track/air temp, humidity.
+    """
+
+    feed: str = "weather.rain_onset"
+    session_id: Optional[str] = Field(default=None, alias="sessionId")
+    event: Optional[str] = None
+    lap: Optional[int] = None
+    utc: Optional[str] = None
+    data: Optional[Any] = None
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+
+class WeatherForecastUpdate(_Feed):
+    """``weather.forecast_update`` — predictive rain forecast (race/sprint).
+
+    Top-level forecast fields plus ``next60min``: up to 4 × 15-min slots ahead.
+    """
+
+    feed: str = "weather.forecast_update"
+    session_id: Optional[str] = Field(default=None, alias="sessionId")
+    event: Optional[str] = None
+    lap: Optional[int] = None
+    utc: Optional[str] = None
+    source: Optional[str] = None
+    forecast_model: Optional[str] = Field(default=None, alias="model")
+    current_precip_rate_mmhr: Optional[float] = Field(default=None, alias="currentPrecipRateMmhr")
+    precip_probability_pct: Optional[float] = Field(default=None, alias="precipProbabilityPct")
+    next_60min: Optional[List[Any]] = Field(default=None, alias="next60min")
+
+    # `model` is in pydantic's protected namespace; disable it for this wire field.
+    model_config = ConfigDict(extra="allow", populate_by_name=True, protected_namespaces=())
+
+
+class WeatherTyreMismatch(_Feed):
+    """``weather.tyre_mismatch`` — per-driver wet-tyre alert (race/sprint).
+
+    Fires when a slick-shod driver has rain falling or imminent. ``severity`` is
+    urgent/advisory; ``trigger`` is raining_now/forecast_imminent/forecast_watch.
+    """
+
+    feed: str = "weather.tyre_mismatch"
+    session_id: Optional[str] = Field(default=None, alias="sessionId")
+    event: Optional[str] = None
+    lap: Optional[int] = None
+    utc: Optional[str] = None
+    driver: Optional[Any] = None
+    current_compound: Optional[str] = Field(default=None, alias="currentCompound")
+    severity: Optional[str] = None
+    trigger: Optional[str] = None
+    expected_wet_onset_lap: Optional[int] = Field(default=None, alias="expectedWetOnsetLap")
+    rain_probability_next5_laps: Optional[float] = Field(default=None, alias="rainProbabilityNext5Laps")
+    intermediate_window_open: Optional[bool] = Field(default=None, alias="intermediateWindowOpen")
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+
+class WeatherStrategyDivergence(_Feed):
+    """``weather.strategy_divergence`` — wet vs dry compound split (race/sprint).
+
+    ``data`` carries ``on_wet_compounds`` / ``on_dry_compounds`` group stats and
+    ``favored_group`` (wet_compounds/dry_compounds/neutral).
+    """
+
+    feed: str = "weather.strategy_divergence"
+    session_id: Optional[str] = Field(default=None, alias="sessionId")
+    event: Optional[str] = None
+    lap: Optional[int] = None
+    utc: Optional[str] = None
+    data: Optional[Any] = None
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+
+class WeatherCompoundCrossoverAlert(_Feed):
+    """``weather.compound_crossover_alert`` — inter→slick crossover after rain.
+
+    Fires once per wet phase when slick drivers are measurably faster than inters.
+    Wire keys are snake_case (``rain_cleared_lap``, ``estimated_laps_until_all_on_slick``).
+    """
+
+    feed: str = "weather.compound_crossover_alert"
+    session_id: Optional[str] = Field(default=None, alias="sessionId")
+    event: Optional[str] = None
+    lap: Optional[int] = None
+    utc: Optional[str] = None
+    direction: Optional[str] = None
+    confidence: Optional[float] = None
+    evidence: Optional[Any] = None
+    rain_cleared_lap: Optional[int] = None
+    estimated_laps_until_all_on_slick: Optional[int] = None
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+
 __all__ = [
     "WeatherData",
     "TrackStatus",
@@ -243,4 +422,14 @@ __all__ = [
     "AnalyticsConstructor",
     "AnalyticsChampionshipProbability",
     "AnalyticsQualifying",
+    "AnalyticsSectorPace",
+    "AnalyticsBattle",
+    "AnalyticsPitWindow",
+    "AnalyticsTrackConditions",
+    "AnalyticsPitQuality",
+    "WeatherRainEvent",
+    "WeatherForecastUpdate",
+    "WeatherTyreMismatch",
+    "WeatherStrategyDivergence",
+    "WeatherCompoundCrossoverAlert",
 ]

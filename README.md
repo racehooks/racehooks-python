@@ -1,8 +1,8 @@
 # racehooks
 
-Official [RaceHooks](https://racehooks.io) client library for Python — verify F1 live-timing webhooks and work with typed event models.
+Official [RaceHooks](https://racehooks.io) client library for Python — verify webhooks and work with typed payloads from the motorsports analytics platform.
 
-RaceHooks pushes Formula 1 live timing events to your webhook endpoint. Each delivery is signed with HMAC-SHA256 so you can confirm it really came from RaceHooks and wasn't tampered with in transit. This library verifies those signatures and parses deliveries into Pydantic v2 models.
+RaceHooks delivers 50+ live F1 feeds — timing, race events, and 18 derived analytics feeds backed by twelve production ML models — to your webhook endpoint. Each delivery is signed with HMAC-SHA256 so you can confirm it really came from RaceHooks and wasn't tampered with in transit. This library verifies those signatures and parses deliveries into Pydantic v2 models.
 
 > RaceHooks is an independent service and is not affiliated with or endorsed by Formula One Management or the FIA. "Formula 1," "F1," and related marks are trademarks of Formula One Licensing BV.
 
@@ -116,7 +116,13 @@ Pass the timestamp header through to `construct_event` / `verify_signature`
 | `raceevent` | `RaceEvent` | `event`, `lap`, `utc` |
 | `sessiontiming` | `SessionTimingEvent` | `utc`, `lap`, `total_laps`, `track_status` |
 | `racesummary` | `RaceSummaryEvent` | — |
+| `analytics.*` (12 feeds) | `AnalyticsStrategy`, `AnalyticsRaceOdds`, `AnalyticsGapProjection`, `AnalyticsTireStrategy`, `AnalyticsConstructor`, `AnalyticsChampionshipProbability`, `AnalyticsQualifying`, `AnalyticsSectorPace`, `AnalyticsBattle`, `AnalyticsPitWindow`, `AnalyticsTrackConditions`, `AnalyticsPitQuality` | per-feed (see `racehooks.models.feeds`) |
+| `weather.*` (6 feeds) | `WeatherRainEvent` (onset + cleared), `WeatherForecastUpdate`, `WeatherTyreMismatch`, `WeatherStrategyDivergence`, `WeatherCompoundCrossoverAlert` | per-feed |
 | anything else | `WebhookEvent` | — |
+
+The 18 derived analytics feeds (12 `analytics.*` + 6 `weather.*`) are delivered on the
+Analytics tier and backed by twelve production ML models. Import their models from
+`racehooks.models.feeds`.
 
 All envelopes expose `feed`, `session_id`, and `data`. Feed data models
 (`WeatherData`, `TrackStatus`, `LapCount`, `DriverEntry`, …) are available for

@@ -103,3 +103,75 @@ def test_raceevent_defaults_lap_to_zero():
         {"feed": "raceevent", "sessionId": "s1", "event": "session.start", "data": {}}
     )
     assert event.lap == 0
+
+
+def test_parse_derived_analytics_feeds_specialize():
+    from racehooks.models.feeds import (
+        AnalyticsSectorPace,
+        AnalyticsBattle,
+        AnalyticsPitWindow,
+        AnalyticsTrackConditions,
+        AnalyticsPitQuality,
+    )
+
+    cases = {
+        "analytics.sector-pace": AnalyticsSectorPace,
+        "analytics.battle": AnalyticsBattle,
+        "analytics.pit-window": AnalyticsPitWindow,
+        "analytics.track-conditions": AnalyticsTrackConditions,
+        "analytics.pit-quality": AnalyticsPitQuality,
+    }
+    for feed, cls in cases.items():
+        ev = parse_event(
+            {"feed": feed, "sessionId": "9724", "lap": 20, "utc": "t", "data": {"k": 1}}
+        )
+        assert isinstance(ev, cls)
+        assert ev.data == {"k": 1}
+
+
+def test_parse_weather_feeds_specialize():
+    from racehooks.models.feeds import (
+        WeatherRainEvent,
+        WeatherForecastUpdate,
+        WeatherTyreMismatch,
+        WeatherStrategyDivergence,
+        WeatherCompoundCrossoverAlert,
+    )
+
+    rain = parse_event(
+        {"feed": "weather.rain_onset", "sessionId": "9724", "event": "rain_onset",
+         "lap": 14, "utc": "t", "data": {"type": "rain_onset", "precipRateMmhr": 1.2}}
+    )
+    assert isinstance(rain, WeatherRainEvent)
+
+    # rain_cleared maps to the same model
+    assert isinstance(parse_event({"feed": "weather.rain_cleared", "sessionId": "9724"}), WeatherRainEvent)
+
+    forecast = parse_event(
+        {"feed": "weather.forecast_update", "sessionId": "9724", "event": "weather.forecast_update",
+         "lap": 10, "utc": "t", "source": "open-meteo", "model": "ukmo_seamless",
+         "currentPrecipRateMmhr": 0.0, "precipProbabilityPct": 65, "next60min": []}
+    )
+    assert isinstance(forecast, WeatherForecastUpdate)
+    assert forecast.forecast_model == "ukmo_seamless"
+    assert forecast.precip_probability_pct == 65.0
+
+    mismatch = parse_event(
+        {"feed": "weather.tyre_mismatch", "event": "weather.tyre_mismatch", "sessionId": "9724",
+         "lap": 15, "utc": "t", "currentCompound": "MEDIUM", "severity": "urgent",
+         "trigger": "raining_now", "expectedWetOnsetLap": 15,
+         "rainProbabilityNext5Laps": 0.82, "intermediateWindowOpen": True}
+    )
+    assert isinstance(mismatch, WeatherTyreMismatch)
+    assert mismatch.current_compound == "MEDIUM"
+    assert mismatch.severity == "urgent"
+
+    assert isinstance(parse_event({"feed": "weather.strategy_divergence", "sessionId": "9724"}), WeatherStrategyDivergence)
+
+    crossover = parse_event(
+        {"feed": "weather.compound_crossover_alert", "sessionId": "9724", "event": "x",
+         "lap": 24, "utc": "t", "direction": "inter_to_slick", "confidence": 0.78,
+         "evidence": {}, "rain_cleared_lap": 20, "estimated_laps_until_all_on_slick": 3}
+    )
+    assert isinstance(crossover, WeatherCompoundCrossoverAlert)
+    assert crossover.rain_cleared_lap == 20

@@ -8,10 +8,11 @@ Envelope shapes mirror the server (see ``feedHandlers.ts``):
 * Generic feeds: ``{ feed, sessionId, data }``
 * ``raceevent``:  ``{ feed, sessionId, event, lap, utc, data }``
 * ``sessiontiming``: ``{ feed, sessionId, utc, ...trackerFields }``
-* Analytics feeds: ``{ feed, sessionId, raceId, lap, utc, drivers/constructors/... }``
-  (``analytics.strategy``, ``analytics.race-odds``, ``analytics.gap-projection``,
-  ``analytics.tire-strategy``, ``analytics.constructor``,
-  ``analytics.championship-probability``, ``analytics.qualifying``)
+* Derived analytics feeds (18 total — 12 ``analytics.*`` + 6 ``weather.*``):
+  strategy, race-odds, gap-projection, tire-strategy, constructor,
+  championship-probability, qualifying, sector-pace, battle, pit-window,
+  track-conditions, pit-quality; plus weather rain_onset/rain_cleared,
+  forecast_update, tyre_mismatch, strategy_divergence, compound_crossover_alert.
 
 :func:`parse_event` deserializes a raw payload into the most specific model,
 falling back to :class:`WebhookEvent` for feeds without a dedicated class.
@@ -31,6 +32,16 @@ from racehooks.models.feeds import (
     AnalyticsConstructor,
     AnalyticsChampionshipProbability,
     AnalyticsQualifying,
+    AnalyticsSectorPace,
+    AnalyticsBattle,
+    AnalyticsPitWindow,
+    AnalyticsTrackConditions,
+    AnalyticsPitQuality,
+    WeatherRainEvent,
+    WeatherForecastUpdate,
+    WeatherTyreMismatch,
+    WeatherStrategyDivergence,
+    WeatherCompoundCrossoverAlert,
 )
 
 
@@ -97,6 +108,17 @@ _EVENT_MODELS: Dict[str, Any] = {
     "analytics.constructor":             AnalyticsConstructor,
     "analytics.championship-probability": AnalyticsChampionshipProbability,
     "analytics.qualifying":              AnalyticsQualifying,
+    "analytics.sector-pace":             AnalyticsSectorPace,
+    "analytics.battle":                  AnalyticsBattle,
+    "analytics.pit-window":              AnalyticsPitWindow,
+    "analytics.track-conditions":        AnalyticsTrackConditions,
+    "analytics.pit-quality":             AnalyticsPitQuality,
+    "weather.rain_onset":                WeatherRainEvent,
+    "weather.rain_cleared":              WeatherRainEvent,
+    "weather.forecast_update":           WeatherForecastUpdate,
+    "weather.tyre_mismatch":             WeatherTyreMismatch,
+    "weather.strategy_divergence":       WeatherStrategyDivergence,
+    "weather.compound_crossover_alert":  WeatherCompoundCrossoverAlert,
 }
 
 AnyEvent = Union[
@@ -110,6 +132,16 @@ AnyEvent = Union[
     AnalyticsConstructor,
     AnalyticsChampionshipProbability,
     AnalyticsQualifying,
+    AnalyticsSectorPace,
+    AnalyticsBattle,
+    AnalyticsPitWindow,
+    AnalyticsTrackConditions,
+    AnalyticsPitQuality,
+    WeatherRainEvent,
+    WeatherForecastUpdate,
+    WeatherTyreMismatch,
+    WeatherStrategyDivergence,
+    WeatherCompoundCrossoverAlert,
     WebhookEvent,
 ]
 
@@ -148,4 +180,14 @@ __all__ = [
     "AnalyticsConstructor",
     "AnalyticsChampionshipProbability",
     "AnalyticsQualifying",
+    "AnalyticsSectorPace",
+    "AnalyticsBattle",
+    "AnalyticsPitWindow",
+    "AnalyticsTrackConditions",
+    "AnalyticsPitQuality",
+    "WeatherRainEvent",
+    "WeatherForecastUpdate",
+    "WeatherTyreMismatch",
+    "WeatherStrategyDivergence",
+    "WeatherCompoundCrossoverAlert",
 ]

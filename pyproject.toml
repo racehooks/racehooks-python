@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "racehooks"
-version = "0.1.0"
+version = "0.2.0"
 description = "Official RaceHooks client library — F1 live timing webhook signature verification and typed event models."
 readme = "README.md"
 requires-python = ">=3.9"
