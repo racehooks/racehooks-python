@@ -11,13 +11,44 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
-        run: pip install -e ".[test]"
+        run: pip install -e ".[grpc,test]"
       - name: Run tests
         run: pytest -v
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: pip install -e ".[grpc]" ruff mypy grpc-stubs
+      - name: ruff
+        run: |
+          ruff check racehooks/grpc tests/test_grpc.py
+          ruff format --check racehooks/grpc tests/test_grpc.py
+      - name: mypy (gRPC client)
+        run: mypy racehooks/grpc/client.py racehooks/grpc/__init__.py --ignore-missing-imports
+
+  proto:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install codegen toolchain
+        run: pip install -e ".[codegen]"
+      - name: Verify generated stubs are up to date
+        run: |
+          bash scripts/gen_proto.sh
+          git diff --exit-code -- racehooks/grpc/_gen \
+            || (echo "stubs out of date: run scripts/gen_proto.sh" && exit 1)

@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "racehooks"
-version = "0.2.0"
-description = "Official RaceHooks client library — F1 live timing webhook signature verification and typed event models."
+version = "0.5.0"
+description = "Official RaceHooks client library — REST API client (fantasy, feeds, events, webhooks), F1 live timing webhook signature verification, typed event models, and optional gRPC streaming."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
@@ -20,11 +20,13 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries",
     "Typing :: Typed",
 ]
 dependencies = [
     "pydantic>=2.0,<3.0",
+    "httpx>=0.24",
 ]
 
 [project.urls]
@@ -32,12 +34,22 @@ Homepage = "https://racehooks.io"
 Repository = "https://github.com/racehooks/racehooks-python"
 
 [project.optional-dependencies]
+# gRPC streaming client (heavy, C-extension deps) — opt-in: pip install racehooks[grpc]
+grpc = [
+    "grpcio>=1.50",
+    "protobuf>=4.21",
+]
 test = [
     "pytest>=7.0",
     "pytest-asyncio>=0.21",
     "flask>=2.0",
     "fastapi>=0.100",
     "httpx>=0.24",
+]
+# Codegen toolchain for regenerating the protobuf stubs (see scripts/gen_proto.sh).
+codegen = [
+    "grpcio-tools>=1.50",
+    "protoletariat>=3.2",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -46,3 +58,7 @@ packages = ["racehooks"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.ruff]
+# Generated protobuf stubs are not linted/formatted.
+extend-exclude = ["racehooks/grpc/_gen"]

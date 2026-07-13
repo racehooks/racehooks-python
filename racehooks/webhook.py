@@ -127,7 +127,7 @@ class WebhookHandler:
                 request.headers.get("X-RaceHooks-Signature"),
                 timestamp=request.headers.get("X-RaceHooks-Sent-At"),
             )
-            if event.feed == "raceevent":
+            if event.feed == "events.race":
                 print(event.event, event.data)
     """
 
