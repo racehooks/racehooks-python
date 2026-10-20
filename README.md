@@ -257,6 +257,10 @@ path. Pass `reconnect=False` to surface terminal errors instead; call
 `subscribe(...)` returns lazily and iteration **blocks**, so run it in a thread
 (or an executor) if your app has other work to do.
 
+## Documentation
+
+Full docs: https://racehooks.io/docs/sdk
+
 ## License
 
 MIT
