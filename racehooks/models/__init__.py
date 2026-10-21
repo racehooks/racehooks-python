@@ -51,6 +51,13 @@ from .fantasy import (
     SessionPitTimes,
     SessionScores,
 )
+from .simulate import (
+    DemoSession,
+    ReplayableSession,
+    ReplayableSessionList,
+    ReplayQuota,
+    SimulateArtifact,
+)
 from .resources import (
     CreateWebhookResult,
     DeliveryLog,
@@ -140,4 +147,10 @@ __all__ = [
     "FantasyScoreEntry",
     "RaceScores",
     "SessionScores",
+    # session replay
+    "DemoSession",
+    "ReplayQuota",
+    "ReplayableSession",
+    "ReplayableSessionList",
+    "SimulateArtifact",
 ]

@@ -25,6 +25,11 @@ from .client import (
     RaceHooksError,
 )
 from .models import (
+    DemoSession,
+    ReplayQuota,
+    ReplayableSession,
+    ReplayableSessionList,
+    SimulateArtifact,
     AnalyticsBattle,
     AnalyticsChampionshipProbability,
     AnalyticsGapProjection,
@@ -187,4 +192,10 @@ __all__ = [
     "FantasyScoreEntry",
     "RaceScores",
     "SessionScores",
+    # session replay
+    "DemoSession",
+    "ReplayQuota",
+    "ReplayableSession",
+    "ReplayableSessionList",
+    "SimulateArtifact",
 ]

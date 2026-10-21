@@ -82,7 +82,10 @@ class Webhook(_Resource):
 
 
 class Simulation(_Resource):
-    """A Simulate historical-replay run (``GET /v1/simulations``)."""
+    """Deprecated: the retired per-request replay run.
+
+    Use ``rh.simulate`` (sessions / prepare / status) instead.
+    """
 
     simulation_id: Optional[str] = Field(default=None, alias="simulationId")
     client_id: Optional[str] = Field(default=None, alias="clientId")
