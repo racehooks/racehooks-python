@@ -54,6 +54,19 @@ if pits.fastest_stop:
     print(pits.fastest_stop.tla, pits.fastest_stop.pit_stop_time_sec, "s")
 ```
 
+### Session replay
+
+Replay a completed session as if it were live. List replayable sessions, warm
+the recorded-playback artifact, then stream it from the simulate-stream service:
+
+```python
+rh.simulate.sessions(year=2026, type="race")   # replayable sessions (+ total, restricted_to_season)
+rh.simulate.demo()                             # the curated demo session
+art = rh.simulate.prepare("2026-great-britain_r")  # generate the artifact if cold
+rh.simulate.status("2026-great-britain_r")     # status: ready | preparing | missing | unknown
+rh.simulate.quota()                            # your tier's replay slots (-1 = unlimited)
+```
+
 ### Core resources
 
 ```python

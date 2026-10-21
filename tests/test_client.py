@@ -284,3 +284,119 @@ def test_missing_credentials_raise_value_error() -> None:
         RaceHooks("", "secret")
     with pytest.raises(ValueError):
         RaceHooks("cid", "")
+
+
+# ---------------------------------------------------------------------------
+# Session replay (/v1/simulate/*)
+# ---------------------------------------------------------------------------
+
+
+def _replay_client(payload, seen: List[httpx.Request]) -> RaceHooks:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/oauth":
+            return _oauth_response()
+        seen.append(request)
+        return httpx.Response(200, json={"data": payload})
+
+    return _make_client(handler)
+
+
+def test_simulate_sessions_query_and_models() -> None:
+    seen: List[httpx.Request] = []
+    rh = _replay_client(
+        {
+            "sessions": [
+                {
+                    "sessionId": "2026-great-britain_r",
+                    "sessionName": "Race",
+                    "eventId": "e1",
+                    "eventName": "British Grand Prix",
+                    "circuitId": None,
+                    "year": 2026,
+                    "type": "r",
+                    "startDate": "2026-07-05T14:00:00Z",
+                    "analyticsPreview": True,
+                }
+            ],
+            "total": 1,
+            "limit": 20,
+            "offset": 0,
+            "restrictedToSeason": "2026",
+        },
+        seen,
+    )
+    res = rh.simulate.sessions(year=2026, type="race", limit=20, offset=0)
+    req = seen[0]
+    assert req.method == "GET" and req.url.path == "/v1/simulate/sessions"
+    assert dict(req.url.params) == {
+        "year": "2026",
+        "type": "race",
+        "limit": "20",
+        "offset": "0",
+    }
+    assert res.restricted_to_season == "2026"
+    assert res.sessions[0].session_id == "2026-great-britain_r"
+    assert res.sessions[0].analytics_preview is True
+
+
+def test_simulate_sessions_no_filters_sends_no_query() -> None:
+    seen: List[httpx.Request] = []
+    rh = _replay_client({"sessions": [], "total": 0}, seen)
+    assert rh.simulate.sessions().sessions == []
+    assert str(seen[0].url.query, "ascii") == ""
+
+
+def test_simulate_status_and_prepare() -> None:
+    art = {
+        "sessionId": "2026-great-britain_r",
+        "modelVersion": "v1",
+        "profile": "lite",
+        "status": "preparing",
+        "formatFallback": True,
+    }
+    seen: List[httpx.Request] = []
+    rh = _replay_client(art, seen)
+    s = rh.simulate.status("2026-great-britain_r")
+    assert seen[0].method == "GET" and seen[0].url.path == "/v1/simulate/status"
+    assert seen[0].url.params["session"] == "2026-great-britain_r"
+    assert s.status == "preparing" and s.format_fallback is True
+
+    p = rh.simulate.prepare("2026-great-britain_r")
+    assert seen[1].method == "POST" and seen[1].url.path == "/v1/simulate/prepare"
+    assert json.loads(seen[1].content) == {"sessionId": "2026-great-britain_r"}
+    assert p.profile == "lite" and p.model_version == "v1"
+
+
+def test_simulate_demo_and_quota() -> None:
+    seen: List[httpx.Request] = []
+    rh = _replay_client({"sessionId": "2026-demo_r", "status": "ready"}, seen)
+    demo = rh.simulate.demo()
+    assert seen[0].url.path == "/v1/simulate/demo"
+    assert demo.session_id == "2026-demo_r" and demo.status == "ready"
+
+    seen2: List[httpx.Request] = []
+    rh2 = _replay_client(
+        {
+            "limit": -1,
+            "used": 2,
+            "remaining": -1,
+            "unlocked": ["a", "b"],
+            "currentSeasonOnly": True,
+        },
+        seen2,
+    )
+    q = rh2.simulate.quota()
+    assert seen2[0].url.path == "/v1/simulate/quota"
+    assert q.limit == -1 and q.unlocked == ["a", "b"] and q.current_season_only
+
+
+def test_simulate_error_raises_api_error() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/oauth":
+            return _oauth_response()
+        return httpx.Response(403, text="forbidden")
+
+    rh = _make_client(handler)
+    with pytest.raises(RaceHooksAPIError) as ei:
+        rh.simulate.quota()
+    assert ei.value.status_code == 403

@@ -13,6 +13,10 @@
     events = rh.events.list(upcoming=True)
     ctx = rh.live.context()
 
+    # Session replay
+    rh.simulate.sessions(year=2026)
+    rh.simulate.prepare("2026-great-britain_r")
+
 Authentication uses the OAuth 2 client-credentials flow: the client exchanges
 ``client_id`` + ``client_secret`` for a short-lived Bearer token on the first
 request and refreshes it automatically before expiry. Credentials come from the
@@ -31,10 +35,14 @@ from .models import (
     CreateWebhookResult,
     EventList,
     FeedList,
+    DemoSession,
     LiveContext,
     RaceScores,
+    ReplayableSessionList,
+    ReplayQuota,
     SessionPitTimes,
     SessionScores,
+    SimulateArtifact,
     Webhook,
     WebhookList,
     WebhookLogList,
@@ -117,6 +125,7 @@ class RaceHooks:
         self.feeds = FeedsNamespace(self)
         self.events = EventsNamespace(self)
         self.live = LiveNamespace(self)
+        self.simulate = SimulateNamespace(self)
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -461,6 +470,62 @@ class LiveNamespace:
         return LiveContext.model_validate(res["data"])
 
 
+class SimulateNamespace:
+    """Session replay: prepare a completed session's recorded-playback artifact.
+
+    Playback itself streams from the simulate-stream service. Any authenticated
+    tier can list and prepare real sessions; tier controls the artifact profile
+    (``lite`` vs ``full``) and the replay quota.
+    """
+
+    def __init__(self, client: RaceHooks) -> None:
+        self._client = client
+
+    def sessions(
+        self,
+        *,
+        year: Optional[int] = None,
+        type: Optional[str] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+    ) -> ReplayableSessionList:
+        """List completed sessions available for replay.
+
+        ``type`` is one of ``race``, ``qualifying``, ``sprint``, ``practice``
+        (``GET /v1/simulate/sessions``). Self-serve tiers see the current
+        season plus the demo session; ``restricted_to_season`` reports the clamp.
+        """
+        params = _pagination_params(limit, offset)
+        if year is not None:
+            params["year"] = year
+        if type is not None:
+            params["type"] = type
+        res = self._client._get("/simulate/sessions", params)
+        return ReplayableSessionList.model_validate(res["data"])
+
+    def demo(self) -> DemoSession:
+        """The curated demo session (``GET /v1/simulate/demo``)."""
+        res = self._client._get("/simulate/demo")
+        return DemoSession.model_validate(res["data"])
+
+    def quota(self) -> ReplayQuota:
+        """Distinct-session replay quota for your tier (``GET /v1/simulate/quota``)."""
+        res = self._client._get("/simulate/quota")
+        return ReplayQuota.model_validate(res["data"])
+
+    def prepare(self, session_id: str) -> SimulateArtifact:
+        """Ensure a session's artifact exists, triggering generation if cold
+        (``POST /v1/simulate/prepare``)."""
+        res = self._client._post("/simulate/prepare", {"sessionId": session_id})
+        return SimulateArtifact.model_validate(res["data"])
+
+    def status(self, session_id: str) -> SimulateArtifact:
+        """Whether a session's artifact is ready to stream
+        (``GET /v1/simulate/status``)."""
+        res = self._client._get("/simulate/status", {"session": session_id})
+        return SimulateArtifact.model_validate(res["data"])
+
+
 __all__: List[str] = [
     "RaceHooks",
     "RaceHooksError",
@@ -471,5 +536,6 @@ __all__: List[str] = [
     "FeedsNamespace",
     "EventsNamespace",
     "LiveNamespace",
+    "SimulateNamespace",
     "DEFAULT_BASE_URL",
 ]
