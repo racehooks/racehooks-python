@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v0.6.1 (2026-10-29)
+
+### Bug Fixes
+
+- First PyPI publish via trusted publishing
+  ([`f58634b`](https://github.com/racehooks/racehooks-python/commit/f58634bb4c0e3efb3f9480cbef4ed43abc330271))
+
+
 ## v0.6.0 (2026-10-21)
 
 ### Continuous Integration
