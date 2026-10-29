@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import threading
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 import httpx
 
@@ -37,16 +37,34 @@ from .models import (
     FeedList,
     DemoSession,
     LiveContext,
+    WebhookEndpoint,
+    WebhookEndpointList,
     RaceScores,
     ReplayableSessionList,
     ReplayQuota,
     SessionPitTimes,
     SessionScores,
     SimulateArtifact,
-    Webhook,
     WebhookList,
     WebhookLogList,
     WebhookTestResult,
+)
+
+from .namespaces import (
+    AnalyticsNamespace,
+    DataNamespace,
+    HistoricalNamespace,
+    IndyCarNamespace,
+    InsightsNamespace,
+    LinesNamespace,
+    ModelsNamespace,
+    PreviewNamespace,
+    StrategyNamespace,
+    TelemetryNamespace,
+    UsageNamespace,
+    _data,
+    _q,
+    iter_sse,
 )
 
 DEFAULT_BASE_URL = "https://api.racehooks.io"
@@ -126,6 +144,17 @@ class RaceHooks:
         self.events = EventsNamespace(self)
         self.live = LiveNamespace(self)
         self.simulate = SimulateNamespace(self)
+        self.data = DataNamespace(self)
+        self.historical = HistoricalNamespace(self)
+        self.indycar = IndyCarNamespace(self)
+        self.insights = InsightsNamespace(self)
+        self.telemetry = TelemetryNamespace(self)
+        self.models = ModelsNamespace(self)
+        self.lines = LinesNamespace(self)
+        self.analytics = AnalyticsNamespace(self)
+        self.preview = PreviewNamespace(self)
+        self.strategy = StrategyNamespace(self)
+        self.usage = UsageNamespace(self)
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -260,6 +289,34 @@ class RaceHooks:
     def _delete(self, path: str) -> Any:
         return self._request("DELETE", path)
 
+    def stream(self, feeds: Optional[List[str]] = None) -> Iterator[Tuple[str, Any]]:
+        """Stream feeds over Server-Sent Events (``GET /v1/stream``).
+
+        No public webhook server is needed. Yields ``(feed_id, payload)`` pairs
+        while the connection stays open; ``ping`` keep-alives are skipped. Pass
+        ``feeds=["events.race", "timing.data"]`` or omit for every feed your tier
+        allows. Reconnecting is up to the caller.
+        """
+        token = self._get_token()
+        params = {"feeds": ",".join(feeds) if feeds else "*"}
+        try:
+            with self._http.stream(
+                "GET",
+                f"{self._base_url}/v1/stream",
+                params=params,
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "text/event-stream",
+                },
+                timeout=httpx.Timeout(self._timeout, read=None),
+            ) as resp:
+                if resp.status_code != 200:
+                    resp.read()
+                    raise RaceHooksAPIError(resp.status_code, resp.text)
+                yield from iter_sse(resp.iter_lines())
+        except httpx.HTTPError as exc:
+            raise RaceHooksError(f"GET /stream failed: {exc}") from exc
+
 
 # ---------------------------------------------------------------------------
 # Fantasy
@@ -311,6 +368,12 @@ class FantasyNamespace:
         res = self._client._get(f"/fantasy/session/{session_id}/pit-times")
         return SessionPitTimes.model_validate(res["data"])
 
+    def get_prices(self, season: int, round: Optional[int] = None) -> Any:
+        """RaceHooks-generated fantasy prices and per-round price history
+        (``GET /v1/fantasy/prices``). An estimate that may differ from the game.
+        Returns the decoded ``data`` payload."""
+        return _data(self._client._get("/fantasy/prices", _q(season=season, round=round)))
+
 
 # ---------------------------------------------------------------------------
 # Webhooks
@@ -318,7 +381,12 @@ class FantasyNamespace:
 
 
 class WebhooksNamespace:
-    """Manage webhook subscriptions, secrets, delivery logs and test sends."""
+    """Manage webhook endpoints, their feed subscriptions, secrets, delivery
+    logs and test sends.
+
+    An endpoint is one URL + signing secret that can carry many feeds. Plan
+    limits cap endpoints and feeds per endpoint (HTTP 402 when exceeded).
+    """
 
     def __init__(self, client: RaceHooks) -> None:
         self._client = client
@@ -326,36 +394,68 @@ class WebhooksNamespace:
     def create(
         self,
         *,
-        feed_id: str,
         webhook_url: str,
+        feed_id: Optional[str] = None,
+        feed_ids: Optional[List[str]] = None,
+        subscriptions: Optional[List[Dict[str, Any]]] = None,
         webhook_method: str = "post",
         filters: Optional[Dict[str, Any]] = None,
+        series_id: Optional[str] = None,
     ) -> CreateWebhookResult:
-        """Create a webhook subscription.
+        """Create a webhook endpoint subscribed to one or more feeds.
+
+        Give exactly one of ``feed_id`` (single feed), ``feed_ids`` (a list;
+        ``"*"`` and group globs such as ``"analytics.*"`` are accepted) or
+        ``subscriptions`` (``[{"feedId": ..., "filters": {...}}]`` for per-feed
+        filters). ``filters`` are endpoint-wide defaults.
 
         The returned ``webhook_secret`` is shown **only once** — store it now to
         verify delivery signatures.
         """
+        given = [x for x in (feed_id, feed_ids, subscriptions) if x is not None]
+        if len(given) != 1:
+            raise ValueError(
+                "pass exactly one of feed_id, feed_ids or subscriptions"
+            )
         body: Dict[str, Any] = {
-            "feedId": feed_id,
             "webhookUrl": webhook_url,
             "webhookMethod": webhook_method,
             "filters": filters or {},
         }
+        if series_id is not None:
+            body["seriesId"] = series_id
+        if subscriptions is not None:
+            body["subscriptions"] = subscriptions
+        elif feed_ids is not None:
+            body["feedIds"] = feed_ids
+        else:
+            body["feedId"] = feed_id
         res = self._client._post("/webhooks", body)
         return CreateWebhookResult.model_validate(res["data"])
 
     def list(
         self, *, limit: Optional[int] = None, offset: Optional[int] = None
     ) -> WebhookList:
-        """List all webhook subscriptions for the authenticated client."""
-        res = self._client._get("/webhooks", _pagination_params(limit, offset))
+        """List feed subscriptions, one row per (endpoint, feed)
+        (``GET /v1/webhooks?shape=flat``). Use :meth:`list_endpoints` for the
+        grouped view."""
+        params = _pagination_params(limit, offset)
+        params["shape"] = "flat"
+        res = self._client._get("/webhooks", params)
         return WebhookList.model_validate(res["data"])
 
-    def get(self, webhook_id: str) -> Webhook:
-        """Retrieve a single webhook by id."""
+    def list_endpoints(
+        self, *, limit: Optional[int] = None, offset: Optional[int] = None
+    ) -> WebhookEndpointList:
+        """List endpoints, each grouping its feed subscriptions
+        (``GET /v1/webhooks``, the server default)."""
+        res = self._client._get("/webhooks", _pagination_params(limit, offset))
+        return WebhookEndpointList.model_validate(res["data"])
+
+    def get(self, webhook_id: str) -> WebhookEndpoint:
+        """Retrieve one endpoint with its feed subscriptions and 7-day stats."""
         res = self._client._get(f"/webhooks/{webhook_id}")
-        return Webhook.model_validate(res["data"]["webhook"])
+        return WebhookEndpoint.model_validate(res["data"]["endpoint"])
 
     def update(
         self,
@@ -365,8 +465,9 @@ class WebhooksNamespace:
         webhook_method: Optional[str] = None,
         active: Optional[bool] = None,
         filters: Optional[Dict[str, Any]] = None,
-    ) -> Webhook:
-        """Patch a webhook subscription. Only provided fields are sent."""
+    ) -> WebhookEndpoint:
+        """Patch an endpoint. Only provided fields are sent and they cascade to
+        every feed on the endpoint; use :meth:`update_feed` for one feed."""
         body: Dict[str, Any] = {}
         if webhook_url is not None:
             body["webhookUrl"] = webhook_url
@@ -377,11 +478,52 @@ class WebhooksNamespace:
         if filters is not None:
             body["filters"] = filters
         res = self._client._patch(f"/webhooks/{webhook_id}", body)
-        return Webhook.model_validate(res["data"]["webhook"])
+        return WebhookEndpoint.model_validate(res["data"]["endpoint"])
 
     def delete(self, webhook_id: str) -> None:
-        """Delete a webhook subscription."""
+        """Delete an endpoint and all of its feed subscriptions."""
         self._client._delete(f"/webhooks/{webhook_id}")
+
+    def add_feeds(
+        self,
+        webhook_id: str,
+        *,
+        feed_ids: Optional[List[str]] = None,
+        subscriptions: Optional[List[Dict[str, Any]]] = None,
+    ) -> WebhookEndpoint:
+        """Add feeds to an existing endpoint (same URL and secret). Feeds already
+        on the endpoint are skipped."""
+        if (feed_ids is None) == (subscriptions is None):
+            raise ValueError("pass exactly one of feed_ids or subscriptions")
+        body: Dict[str, Any] = (
+            {"subscriptions": subscriptions}
+            if subscriptions is not None
+            else {"feedIds": feed_ids}
+        )
+        res = self._client._post(f"/webhooks/{webhook_id}/feeds", body)
+        return WebhookEndpoint.model_validate(res["data"]["endpoint"])
+
+    def remove_feed(self, webhook_id: str, feed_id: str) -> None:
+        """Remove one feed from an endpoint. Removing the last feed deletes it."""
+        self._client._delete(f"/webhooks/{webhook_id}/feeds/{feed_id}")
+
+    def update_feed(
+        self,
+        webhook_id: str,
+        feed_id: str,
+        *,
+        filters: Optional[Dict[str, Any]] = None,
+        active: Optional[bool] = None,
+    ) -> Any:
+        """Update one feed subscription's filters or active flag. Returns the
+        decoded ``data`` payload."""
+        body: Dict[str, Any] = {}
+        if filters is not None:
+            body["filters"] = filters
+        if active is not None:
+            body["active"] = active
+        res = self._client._patch(f"/webhooks/{webhook_id}/feeds/{feed_id}", body)
+        return _data(res)
 
     def test(self, webhook_id: str) -> WebhookTestResult:
         """Fire a test payload at the webhook URL immediately."""
@@ -400,6 +542,21 @@ class WebhooksNamespace:
             f"/webhooks/{webhook_id}/logs", _pagination_params(limit, offset)
         )
         return WebhookLogList.model_validate(res["data"])
+
+    def deliveries(
+        self,
+        *,
+        mode: Optional[str] = None,
+        since: Optional[str] = None,
+        limit: Optional[int] = None,
+    ) -> Any:
+        """Recent deliveries across all your endpoints, newest first, with a
+        summary (sent / ok / retried / failed / p50 / p99). ``mode`` is one of
+        ``live``, ``replay``, ``test`` (``GET /v1/webhooks/deliveries``)."""
+        res = self._client._get(
+            "/webhooks/deliveries", _q(mode=mode, since=since, limit=limit)
+        )
+        return _data(res)
 
     def get_secret(self, webhook_id: str) -> str:
         """Retrieve the HMAC signing secret for a webhook."""
@@ -430,6 +587,11 @@ class FeedsNamespace:
         res = self._client._get("/feeds", _pagination_params(limit, offset))
         return FeedList.model_validate(res["data"])
 
+    def example(self, feed_id: str) -> Any:
+        """The most recent delivered payload for a feed
+        (``GET /v1/feeds/{feedId}/example``), for inspecting payload structure."""
+        return _data(self._client._get(f"/feeds/{feed_id}/example"))
+
 
 class EventsNamespace:
     """The race-weekend event calendar."""
@@ -443,14 +605,24 @@ class EventsNamespace:
         limit: Optional[int] = None,
         offset: Optional[int] = None,
         upcoming: bool = False,
+        season: Optional[int] = None,
         year: Optional[Any] = None,
+        order: Optional[str] = None,
     ) -> EventList:
-        """List calendar events and their sessions (``GET /v1/events``)."""
+        """List calendar events and their sessions (``GET /v1/events``).
+
+        ``season`` filters to one year (``year`` is the older alias); ``order``
+        is ``asc`` (default) or ``desc``.
+        """
         params = _pagination_params(limit, offset)
         if upcoming:
             params["upcoming"] = 1
+        if season is not None:
+            params["season"] = season
         if year is not None:
             params["year"] = year
+        if order is not None:
+            params["order"] = order
         res = self._client._get("/events", params)
         return EventList.model_validate(res["data"])
 
@@ -537,5 +709,16 @@ __all__: List[str] = [
     "EventsNamespace",
     "LiveNamespace",
     "SimulateNamespace",
+    "DataNamespace",
+    "HistoricalNamespace",
+    "IndyCarNamespace",
+    "InsightsNamespace",
+    "TelemetryNamespace",
+    "ModelsNamespace",
+    "LinesNamespace",
+    "AnalyticsNamespace",
+    "PreviewNamespace",
+    "StrategyNamespace",
+    "UsageNamespace",
     "DEFAULT_BASE_URL",
 ]

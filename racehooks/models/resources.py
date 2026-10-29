@@ -81,6 +81,36 @@ class Webhook(_Resource):
     updated_at: Optional[str] = Field(default=None, alias="updatedAt")
 
 
+class WebhookSubscription(_Resource):
+    """One feed subscription on a :class:`WebhookEndpoint`."""
+
+    feed_id: Optional[str] = Field(default=None, alias="feedId")
+    series_id: Optional[str] = Field(default=None, alias="seriesId")
+    filters: Optional[WebhookFilters] = None
+    active: Optional[bool] = None
+    subscription_tier: Optional[str] = Field(default=None, alias="subscriptionTier")
+    consecutive_failures: Optional[int] = Field(default=None, alias="consecutiveFailures")
+    auto_disabled_at: Optional[str] = Field(default=None, alias="autoDisabledAt")
+    created_at: Optional[str] = Field(default=None, alias="createdAt")
+    updated_at: Optional[str] = Field(default=None, alias="updatedAt")
+
+
+class WebhookEndpoint(_Resource):
+    """A webhook endpoint: one URL + signing secret grouping several feeds."""
+
+    webhook_id: Optional[str] = Field(default=None, alias="webhookId")
+    webhook_url: Optional[str] = Field(default=None, alias="webhookUrl")
+    webhook_method: Optional[str] = Field(default=None, alias="webhookMethod")
+    series_id: Optional[str] = Field(default=None, alias="seriesId")
+    active: Optional[bool] = None
+    subscription_tier: Optional[str] = Field(default=None, alias="subscriptionTier")
+    feed_count: Optional[int] = Field(default=None, alias="feedCount")
+    subscriptions: List[WebhookSubscription] = Field(default_factory=list)
+    stats: Optional[Any] = None
+    created_at: Optional[str] = Field(default=None, alias="createdAt")
+    updated_at: Optional[str] = Field(default=None, alias="updatedAt")
+
+
 class Simulation(_Resource):
     """Deprecated: the retired per-request replay run.
 
@@ -114,7 +144,7 @@ class SubscriptionData(_Resource):
 
 
 class LiveDriverRow(_Resource):
-    """A single driver row in the :class:`LiveContext` live-timing snapshot."""
+    """A single driver row in the :class:`LiveContext` live-session snapshot."""
 
     pos: Optional[int] = None
     num: Optional[str] = None
@@ -134,7 +164,7 @@ class LiveDriverRow(_Resource):
 
 
 class LiveContext(_Resource):
-    """The current live-session context snapshot (``GET /v1/live``)."""
+    """The current live-session context snapshot (``GET /v1/live/context``)."""
 
     active: Optional[bool] = None
     session_name: Optional[str] = Field(default=None, alias="sessionName")
@@ -156,6 +186,9 @@ class DeliveryLog(_Resource):
     retry_count: Optional[int] = Field(default=None, alias="retryCount")
     error_message: Optional[str] = Field(default=None, alias="errorMessage")
     payload: Optional[str] = None
+    mode: Optional[str] = None
+    feed_id: Optional[str] = Field(default=None, alias="feedId")
+    dead: Optional[bool] = None
     duration_ms: Optional[int] = Field(default=None, alias="durationMs")
     created_at: Optional[str] = Field(default=None, alias="createdAt")
 
@@ -170,6 +203,11 @@ class CreateWebhookResult(_Resource):
     """
 
     webhook: Optional[Webhook] = None
+    # Set instead of ``webhook`` when created with feed_ids / subscriptions.
+    webhook_id: Optional[str] = Field(default=None, alias="webhookId")
+    webhook_url: Optional[str] = Field(default=None, alias="webhookUrl")
+    webhook_method: Optional[str] = Field(default=None, alias="webhookMethod")
+    subscriptions: Optional[List[WebhookSubscription]] = None
     webhook_secret: Optional[str] = Field(default=None, alias="webhookSecret")
     tier: Optional[str] = None
 
@@ -186,6 +224,15 @@ class WebhookList(_Resource):
     """Paginated webhook list (``GET /v1/webhooks``)."""
 
     webhooks: List[Webhook] = Field(default_factory=list)
+    total: Optional[int] = None
+    limit: Optional[int] = None
+    offset: Optional[int] = None
+
+
+class WebhookEndpointList(_Resource):
+    """Paginated grouped endpoint list (``GET /v1/webhooks``)."""
+
+    endpoints: List[WebhookEndpoint] = Field(default_factory=list)
     total: Optional[int] = None
     limit: Optional[int] = None
     offset: Optional[int] = None

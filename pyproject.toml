@@ -5,12 +5,12 @@ build-backend = "hatchling.build"
 [project]
 name = "racehooks"
 version = "0.6.1"
-description = "Official RaceHooks client library — REST API client (fantasy, feeds, events, webhooks), F1 live timing webhook signature verification, typed event models, and optional gRPC streaming."
+description = "Official RaceHooks client library — predictive models and analytics for motorsport, delivered to your endpoint. REST client, signed-webhook verification, typed event models, and optional gRPC streaming."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [{ name = "RaceHooks", email = "contact@racehooks.io" }]
-keywords = ["racehooks", "f1", "formula1", "webhook", "hmac", "live-timing", "signalr"]
+keywords = ["racehooks", "motorsport", "racing", "analytics", "predictive-models", "webhook", "hmac", "sse"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",

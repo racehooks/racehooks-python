@@ -1,8 +1,8 @@
 # racehooks
 
-Official [RaceHooks](https://racehooks.io) client library for Python — verify webhooks and work with typed payloads from the motorsports analytics platform.
+Official [RaceHooks](https://racehooks.io) client library for Python.
 
-RaceHooks delivers a broad catalog of live F1 feeds — timing, race events, and a suite of derived analytics feeds backed by production ML models — to your webhook endpoint. Each delivery is signed with HMAC-SHA256 so you can confirm it really came from RaceHooks and wasn't tampered with in transit. This library verifies those signatures and parses deliveries into Pydantic v2 models.
+**Predictive models and analytics for motorsport — race intelligence delivered to your endpoint.** RaceHooks pushes a catalog of event and analytics feeds, many backed by production predictive models, to your webhook (or an SSE stream), and serves historical results from 1950 to present over a REST API. Data covers Formula 1 and other series. Each delivery is signed with HMAC-SHA256 so you can confirm it really came from RaceHooks and wasn't tampered with in transit. This library is a typed REST client, verifies those signatures, and parses deliveries into Pydantic v2 models.
 
 > RaceHooks is an independent service and is not affiliated with or endorsed by Formula One Management or the FIA. "Formula 1," "F1," and related marks are trademarks of Formula One Licensing BV.
 
@@ -12,7 +12,7 @@ RaceHooks delivers a broad catalog of live F1 feeds — timing, race events, and
 pip install racehooks
 ```
 
-Python 3.9+. Runtime dependencies are `pydantic>=2` and `httpx`.
+Python 3.9 or newer. Runtime dependencies are `pydantic>=2` and `httpx`.
 
 ## REST API client
 
@@ -29,12 +29,24 @@ from racehooks import RaceHooks
 rh = RaceHooks(
     client_id=os.environ["RACEHOOKS_CLIENT_ID"],
     client_secret=os.environ["RACEHOOKS_CLIENT_SECRET"],
-)
+)  # base URL defaults to https://api.racehooks.io
 ```
+
+Create credentials in the [console](https://racehooks.io/console). The client
+exchanges them at `POST /v1/oauth` for a Bearer token (valid 12 hours by
+default) and refreshes it for you. Plan gating (Free, Developer, Custom) is
+enforced by the API: a call above your plan raises `RaceHooksAPIError` with
+status 402 or 403.
+
+The fantasy, session-replay and webhook methods return typed Pydantic models.
+The data, historical, insights, telemetry, models, lines, analytics, preview,
+strategy and usage namespaces return the decoded JSON `data` payload (`dict`
+or `list`); field names are listed in the
+[OpenAPI spec](https://api.racehooks.io/openapi.json).
 
 ### Fantasy
 
-Estimated F1 Fantasy points and pit-stop leaderboards (paid plan — Developer or
+Estimated fantasy-game points and pit-stop leaderboards (paid plan — Developer or
 higher):
 
 ```python
@@ -67,11 +79,59 @@ rh.simulate.status("2026-great-britain_r")     # status: ready | preparing | mis
 rh.simulate.quota()                            # your tier's replay slots (-1 = unlimited)
 ```
 
+### Model outputs and analytics
+
+```python
+rh.insights.list_races()                    # races with a completed post-race analytics run
+rh.insights.get_race("2026-bahrain-r1")     # per-driver per-lap model outputs (Developer+ for strategic predictions)
+rh.insights.get_model_meta()                # what each model predicts, calibration tier, last retrain
+rh.models.manifest(); rh.models.scorecard(); rh.models.race_winner_record()
+
+rh.lines.list()                             # model-implied fair odds lines (Custom plan)
+rh.lines.get("2026-singapore-r17", checkpoint="q_end", market="winner")
+rh.analytics.h2h("1", "33")                 # P(A finishes ahead of B) (Custom plan)
+rh.preview.upcoming()                       # next-session preview (detail depends on plan)
+rh.strategy.preview_next(); rh.strategy.recap("2026-monaco-r5")
+```
+
+### Data, historical and telemetry
+
+```python
+rh.data.list_drivers(search="ver", active=True)
+rh.data.get_race("2026-bahrain-r1")
+rh.data.get_race_telemetry_laps("2026-bahrain-r1", driver_id="max_verstappen", lap=12)
+rh.data.get_season_standings(2026)
+
+rh.historical.results(2021, 22)             # 1950 to present
+rh.historical.driver_career("lewis_hamilton")
+rh.telemetry.get_lap_comparison("2026-bahrain-r1", 20)
+rh.indycar.standings()
+```
+
+### Account and usage
+
+```python
+rh.usage.current()          # deliveries this period
+rh.usage.by_feed(); rh.usage.latency(); rh.usage.hourly(); rh.usage.history()
+rh.usage.subscription(); rh.usage.billing_plan(); rh.usage.tiers()
+```
+
+### Stream without a webhook server (SSE)
+
+```python
+for feed, payload in rh.stream(["events.race", "timing.data"]):
+    print(feed, payload)
+```
+
+Omit the list for every feed your plan allows. Reconnecting is up to you.
+
 ### Core resources
 
 ```python
 rh.feeds.list()                            # feed catalog
-rh.events.list(upcoming=True, year=2026)   # calendar + sessions
+rh.feeds.example("events.race")            # most recent delivered payload for a feed
+rh.events.list(upcoming=True)              # calendar + sessions
+rh.events.list(season=2026, order="desc")
 rh.live.context()                          # current drivers / positions / flag / RC
 
 # Webhook subscriptions
@@ -82,11 +142,23 @@ res = rh.webhooks.create(
 )
 print(res.webhook_secret)                  # shown once — store it to verify signatures
 
-rh.webhooks.list()
-rh.webhooks.get(webhook_id)
+# One endpoint, many feeds ("*" and "analytics.*" globs work); per-feed filters via subscriptions
+rh.webhooks.create(webhook_url="https://yourserver.com/webhook", feed_ids=["events.race", "analytics.*"])
+rh.webhooks.create(
+    webhook_url="https://yourserver.com/webhook",
+    subscriptions=[{"feedId": "events.race", "filters": {"drivers": ["VER"]}}],
+)
+
+rh.webhooks.list_endpoints()               # grouped: one row per endpoint, with feeds + 7-day stats
+rh.webhooks.list()                         # flat: one row per (endpoint, feed)
+rh.webhooks.get(webhook_id)                # -> WebhookEndpoint
 rh.webhooks.update(webhook_id, active=False)
+rh.webhooks.add_feeds(webhook_id, feed_ids=["weather.data"])
+rh.webhooks.update_feed(webhook_id, "events.race", filters={"drivers": ["NOR"]})
+rh.webhooks.remove_feed(webhook_id, "weather.data")
 rh.webhooks.test(webhook_id)
 rh.webhooks.logs(webhook_id)
+rh.webhooks.deliveries(mode="live")        # recent deliveries across all endpoints + summary
 rh.webhooks.get_secret(webhook_id)
 rh.webhooks.rotate_secret(webhook_id)
 rh.webhooks.delete(webhook_id)
@@ -120,7 +192,7 @@ def webhook():
         event = handler.construct_event(
             request.get_data(),
             request.headers.get("X-RaceHooks-Signature"),
-            timestamp=request.headers.get("X-RaceHooks-Sent-At"),
+            signature_v1=request.headers.get("X-RaceHooks-Signature-V1"),
         )
     except WebhookSignatureError as exc:
         return {"error": str(exc)}, 400
@@ -150,7 +222,7 @@ async def webhook(request: Request):
         event = await handler.construct_event(
             body,
             request.headers.get("X-RaceHooks-Signature"),
-            timestamp=request.headers.get("X-RaceHooks-Sent-At"),
+            signature_v1=request.headers.get("X-RaceHooks-Signature-V1"),
         )
     except WebhookSignatureError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
@@ -174,16 +246,31 @@ typed model.
 
 ### Replay protection (optional)
 
-Every delivery carries an `X-RaceHooks-Sent-At` header (epoch milliseconds).
-Reject stale deliveries by setting a tolerance:
+Every delivery carries two signatures:
+
+- `X-RaceHooks-Signature-V1: t=<sentAtMs>,v1=<hmac of "t.body">` — the send time
+  is **inside** the signature, so a tolerance check on it is real replay
+  protection.
+- `X-RaceHooks-Signature: sha256=<hmac of body>` — the legacy body-only
+  signature. `X-RaceHooks-Sent-At` is not covered by it, so a tolerance check on
+  that header is only a staleness hint.
+
+Pass the V1 header and set a tolerance:
 
 ```python
-handler = WebhookHandler(secret="whsec_...", tolerance_seconds=300)
-# raises WebhookTimestampError if the delivery is older than 5 minutes
+handler = WebhookHandler(secret="whsec_...", tolerance_seconds=300, require_v1=True)
+event = handler.construct_event(
+    raw_body,
+    request.headers.get("X-RaceHooks-Signature"),
+    signature_v1=request.headers.get("X-RaceHooks-Signature-V1"),
+)
+# raises WebhookTimestampError if the signed send time is older than 5 minutes
 ```
 
-Pass the timestamp header through to `construct_event` / `verify_signature`
-(`timestamp=...`) for the check to run.
+When no V1 header is supplied the legacy signature is checked (unless
+`require_v1=True`), and the tolerance reads `timestamp=` (the
+`X-RaceHooks-Sent-At` header). Deliveries are at-least-once: dedupe on the
+`X-RaceHooks-Delivery-Id` header.
 
 ## Event models
 
