@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v0.7.0 (2026-10-29)
+
+### Features
+
+- Bring SDK current with the live API ([#3](https://github.com/racehooks/racehooks-python/pull/3),
+  [`bd4b34c`](https://github.com/racehooks/racehooks-python/commit/bd4b34c7de1a369d27f6e770b5aeb498c372732b))
+
+Fix webhooks.get/update (API returns data.endpoint, not data.webhook) and webhooks.list (now sends
+  shape=flat). Add multi-feed webhook endpoints (feed_ids, subscriptions, add_feeds, update_feed,
+  remove_feed, list_endpoints, deliveries), X-RaceHooks-Signature-V1 verification with
+  signed-timestamp replay protection, SSE stream(), feeds.example, fantasy.get_prices, events
+  season/order, and data, historical, indycar, insights, telemetry, models, lines, analytics,
+  preview, strategy and usage namespaces. Update description, keywords and docs to the approved
+  positioning.
+
+
 ## v0.6.1 (2026-10-29)
 
 ### Bug Fixes

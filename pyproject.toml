@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "racehooks"
-version = "0.6.1"
+version = "0.7.0"
 description = "Official RaceHooks client library — predictive models and analytics for motorsport, delivered to your endpoint. REST client, signed-webhook verification, typed event models, and optional gRPC streaming."
 readme = "README.md"
 requires-python = ">=3.9"
