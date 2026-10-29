@@ -15,7 +15,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import time
-from typing import Optional, Union
+from typing import List, Optional, Tuple, Union
 
 from .models.events import AnyEvent, parse_event
 
@@ -23,6 +23,10 @@ from .models.events import AnyEvent, parse_event
 SIGNATURE_HEADER = "X-RaceHooks-Signature"
 #: Header carrying the send time (epoch milliseconds, as a string).
 TIMESTAMP_HEADER = "X-RaceHooks-Sent-At"
+#: Header carrying the timestamped signature ``t=<sentAtMs>,v1=<hmac of "t.body">``.
+#: The send time is covered by the signature, so a tolerance check on it is
+#: real replay protection (unlike ``X-RaceHooks-Sent-At``, which is unsigned).
+SIGNATURE_V1_HEADER = "X-RaceHooks-Signature-V1"
 
 _Body = Union[str, bytes]
 
@@ -52,6 +56,63 @@ def sign_payload(secret: _Body, body: _Body) -> str:
     return "sha256=" + digest
 
 
+def sign_payload_v1(secret: _Body, body: _Body, sent_at_ms: int) -> str:
+    """Compute the timestamped v1 signature: ``"t=<ms>,v1=<hex>"`` where the
+    HMAC covers ``"<ms>." + body``."""
+    t = str(int(sent_at_ms))
+    mac = hmac.new(_to_bytes(secret), t.encode("ascii") + b".", hashlib.sha256)
+    mac.update(_to_bytes(body))
+    return f"t={t},v1={mac.hexdigest()}"
+
+
+def _parse_v1(header: str) -> Tuple[str, List[str]]:
+    t = ""
+    sigs: List[str] = []
+    for part in header.split(","):
+        key, sep, value = part.partition("=")
+        if not sep or not key.strip():
+            continue
+        key, value = key.strip(), value.strip()
+        if key == "t":
+            t = value
+        elif key == "v1" and value:
+            sigs.append(value)
+    return t, sigs
+
+
+def _check_age(sent_at_ms: float, tolerance_seconds: int, signed: bool) -> None:
+    age_seconds = (time.time() * 1000 - sent_at_ms) / 1000
+    if age_seconds > tolerance_seconds:
+        raise WebhookTimestampError(
+            f"Delivery is {round(age_seconds)}s old (tolerance {tolerance_seconds}s)"
+        )
+    if signed and -age_seconds > tolerance_seconds:
+        raise WebhookTimestampError(
+            f"Delivery is timestamped {round(-age_seconds)}s in the future "
+            f"(tolerance {tolerance_seconds}s)"
+        )
+
+
+def _verify_v1(
+    payload: _Body, header: str, secret: _Body, tolerance_seconds: Optional[int]
+) -> None:
+    t, sigs = _parse_v1(header)
+    if not t.isdigit() or not sigs:
+        raise WebhookSignatureError(
+            "Unexpected v1 signature format (expected 't=<ms>,v1=<hex>')"
+        )
+    expected = sign_payload_v1(secret, payload, int(t)).split("v1=", 1)[1]
+    ok = False
+    for candidate in sigs:  # no early exit: timing must not reveal which matched
+        ok = hmac.compare_digest(candidate, expected) or ok
+    if not ok:
+        raise WebhookSignatureError(
+            "Signature mismatch — payload or timestamp tampered, or secret is wrong"
+        )
+    if tolerance_seconds is not None and tolerance_seconds > 0:
+        _check_age(float(t), tolerance_seconds, signed=True)
+
+
 def verify_signature(
     payload: _Body,
     signature_header: Optional[str],
@@ -59,6 +120,8 @@ def verify_signature(
     *,
     timestamp: Optional[Union[str, int, float]] = None,
     tolerance_seconds: Optional[int] = None,
+    signature_v1: Optional[str] = None,
+    require_v1: bool = False,
 ) -> bool:
     """Verify a webhook signature against the raw payload.
 
@@ -69,6 +132,12 @@ def verify_signature(
     :param secret: The webhook signing secret.
     :param timestamp: The ``X-RaceHooks-Sent-At`` header (epoch ms). Required
         when ``tolerance_seconds`` is set.
+    :param signature_v1: The ``X-RaceHooks-Signature-V1`` header
+        (``t=<ms>,v1=<hex>``). When present it is verified instead of the legacy
+        signature and ``tolerance_seconds`` is enforced on its *signed* send
+        time, which makes it genuine replay protection. Passing the v1 value as
+        ``signature_header`` also works.
+    :param require_v1: Reject deliveries that carry no v1 signature.
     :param tolerance_seconds: If set to a positive integer, reject deliveries
         older than this many seconds (replay protection). ``None`` or ``0``
         disables the check (default behaviour when no tolerance is configured).
@@ -78,10 +147,17 @@ def verify_signature(
     """
     if not secret:
         raise WebhookSignatureError("No webhook secret provided")
-    if not signature_header:
+    sig = (signature_header or "").strip()
+    v1 = (signature_v1 or "").strip() or (sig if sig.startswith("t=") else "")
+    if v1:
+        _verify_v1(payload, v1, secret, tolerance_seconds)
+        return True
+    if require_v1:
+        raise WebhookSignatureError(
+            "Missing X-RaceHooks-Signature-V1 header (require_v1 is set)"
+        )
+    if not sig:
         raise WebhookSignatureError("Missing signature header")
-
-    sig = signature_header.strip()
     if not sig.startswith("sha256="):
         raise WebhookSignatureError(
             "Unexpected signature format (expected 'sha256=' prefix)"
@@ -103,12 +179,7 @@ def verify_signature(
             sent_at_ms = int(float(timestamp))
         except (TypeError, ValueError) as exc:
             raise WebhookTimestampError("Invalid timestamp header") from exc
-        age_seconds = (time.time() * 1000 - sent_at_ms) / 1000
-        if age_seconds > tolerance_seconds:
-            raise WebhookTimestampError(
-                f"Delivery is {round(age_seconds)}s old "
-                f"(tolerance {tolerance_seconds}s)"
-            )
+        _check_age(sent_at_ms, tolerance_seconds, signed=False)
 
     return True
 
@@ -131,11 +202,18 @@ class WebhookHandler:
                 print(event.event, event.data)
     """
 
-    def __init__(self, secret: _Body, *, tolerance_seconds: int = 0) -> None:
+    def __init__(
+        self,
+        secret: _Body,
+        *,
+        tolerance_seconds: int = 0,
+        require_v1: bool = False,
+    ) -> None:
         if not secret:
             raise ValueError("WebhookHandler requires a non-empty secret")
         self.secret = secret
         self.tolerance_seconds = tolerance_seconds
+        self.require_v1 = require_v1
 
     def verify(
         self,
@@ -143,6 +221,7 @@ class WebhookHandler:
         signature_header: Optional[str],
         *,
         timestamp: Optional[Union[str, int, float]] = None,
+        signature_v1: Optional[str] = None,
     ) -> bool:
         """Verify a signature; raise on failure. See :func:`verify_signature`."""
         return verify_signature(
@@ -151,6 +230,8 @@ class WebhookHandler:
             self.secret,
             timestamp=timestamp,
             tolerance_seconds=self.tolerance_seconds,
+            signature_v1=signature_v1,
+            require_v1=self.require_v1,
         )
 
     def construct_event(
@@ -159,12 +240,15 @@ class WebhookHandler:
         signature_header: Optional[str],
         *,
         timestamp: Optional[Union[str, int, float]] = None,
+        signature_v1: Optional[str] = None,
     ) -> AnyEvent:
         """Verify the signature and parse the payload into a typed event.
 
         :raises WebhookSignatureError: on signature/timestamp failure.
         """
-        self.verify(payload, signature_header, timestamp=timestamp)
+        self.verify(
+            payload, signature_header, timestamp=timestamp, signature_v1=signature_v1
+        )
         return parse_event(payload)
 
 
@@ -193,18 +277,23 @@ class AsyncWebhookHandler(WebhookHandler):
         signature_header: Optional[str],
         *,
         timestamp: Optional[Union[str, int, float]] = None,
+        signature_v1: Optional[str] = None,
     ) -> AnyEvent:
-        self.verify(payload, signature_header, timestamp=timestamp)
+        self.verify(
+            payload, signature_header, timestamp=timestamp, signature_v1=signature_v1
+        )
         return parse_event(payload)
 
 
 __all__ = [
     "SIGNATURE_HEADER",
     "TIMESTAMP_HEADER",
+    "SIGNATURE_V1_HEADER",
     "WebhookSignatureError",
     "WebhookTimestampError",
     "WebhookHandler",
     "AsyncWebhookHandler",
     "sign_payload",
+    "sign_payload_v1",
     "verify_signature",
 ]

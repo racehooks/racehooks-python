@@ -1,8 +1,9 @@
 """racehooks — official RaceHooks client library for Python.
 
-Call the RaceHooks REST API (fantasy scores, feeds, events, webhooks, live
-context), verify F1 live-timing webhooks signed by RaceHooks, and work with
-typed event models.
+Predictive models and analytics for motorsport — race intelligence delivered to
+your endpoint. Call the RaceHooks REST API (model outputs, data, historical
+results, feeds, events, webhooks), verify signed webhook deliveries, and work
+with typed event models.
 
     from racehooks import RaceHooks, WebhookHandler
 
@@ -87,7 +88,10 @@ from .models import (
     Webhook,
     WebhookEvent,
     WebhookFilters,
+    WebhookEndpoint,
+    WebhookEndpointList,
     WebhookList,
+    WebhookSubscription,
     WebhookLogList,
     WebhookTestResult,
     WinningMarginLeadBattle,
@@ -95,12 +99,14 @@ from .models import (
 )
 from .webhook import (
     SIGNATURE_HEADER,
+    SIGNATURE_V1_HEADER,
     TIMESTAMP_HEADER,
     AsyncWebhookHandler,
     WebhookHandler,
     WebhookSignatureError,
     WebhookTimestampError,
     sign_payload,
+    sign_payload_v1,
     verify_signature,
 )
 
@@ -119,9 +125,11 @@ __all__ = [
     "AsyncWebhookHandler",
     "verify_signature",
     "sign_payload",
+    "sign_payload_v1",
     "WebhookSignatureError",
     "WebhookTimestampError",
     "SIGNATURE_HEADER",
+    "SIGNATURE_V1_HEADER",
     "TIMESTAMP_HEADER",
     # events
     "parse_event",
@@ -176,6 +184,9 @@ __all__ = [
     "FeedList",
     "Webhook",
     "WebhookFilters",
+    "WebhookEndpoint",
+    "WebhookEndpointList",
+    "WebhookSubscription",
     "WebhookList",
     "CreateWebhookResult",
     "WebhookTestResult",
