@@ -1,5 +1,6 @@
 # CHANGELOG
 
+<!-- version list -->
 
 ## v0.7.0 (2026-10-29)
 
@@ -37,10 +38,6 @@ Every push to main now runs python-semantic-release: it reads conventional-commi
   is published to PyPI via Trusted Publishing (OIDC, id-token: write) with no API token. Commits
   with no releasable changes publish nothing.
 
-Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
-
-Claude-Session: https://claude.ai/code/session_0154kxLcTDMbDLdJeMcrmJxB
-
 ### Documentation
 
 - Link to racehooks.io docs; fix repository/bugs URLs
@@ -66,16 +63,12 @@ Claude-Session: https://claude.ai/code/session_0154kxLcTDMbDLdJeMcrmJxB
   re-declarations from RaceEvent, SessionTimingEvent, and RaceSummaryEvent — Pydantic v2 merges
   config from the parent, so the identical ConfigDict on each subclass was dead code
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
-
 - **sdk**: Rename type→feed throughout, fix domain, add trademark disclaimer
   ([`a9173c2`](https://github.com/racehooks/racehooks-python/commit/a9173c2ae88adbb36a36d14c92784011b3560360))
 
 Renames the `type` envelope field to `feed` across all source, tests, and docs to match the server
   payload shape. Fixes `racehooks-ai.com` → `racehooks.io` in README and pyproject.toml. Adds the
   required trademark disclaimer below the opening description paragraph in the README.
-
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 
 ### Documentation
 
@@ -85,8 +78,6 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 Replace "These mirror the raw F1 SignalR feed shapes" with neutral RaceHooks webhook payload
   framing. Remove cross-reference to @racehooks/f1-telemetry-schema (not published). The models
   describe what RaceHooks delivers, not how it is sourced.
-
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 
 ### Features
 
@@ -124,8 +115,6 @@ Flat weather feeds type their top-level fields with correct wire-key aliases (ca
 README leads with the motorsports analytics platform (50+ live feeds, twelve production ML models)
   and documents all 18 derived feed models. 31 tests pass. Bump 0.1.0 → 0.2.0.
 
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
-
 - **models**: Add typed models for all 7 analytics feeds
   ([`011ea4a`](https://github.com/racehooks/racehooks-python/commit/011ea4a2011aa02992d46669a680e307c7754e18))
 
@@ -133,5 +122,3 @@ Analytics feeds are now standalone deliveries, not enrichment on timingdata. Add
   for analytics.strategy, analytics.race-odds, analytics.gap-projection, analytics.tire-strategy,
   analytics.constructor, analytics.championship-probability, and analytics.qualifying. All 7 are
   registered in _EVENT_MODELS so parse_event returns a typed instance.
-
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>

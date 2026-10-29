@@ -62,6 +62,10 @@ build_command = "python -m pip install build && python -m build"
 commit_message = "chore(release): {version} [skip ci]\n\nAutomated release."
 tag_format = "v{version}"
 
+[tool.semantic_release.changelog]
+mode = "update"
+insertion_flag = "<!-- version list -->"
+
 [tool.semantic_release.branches.main]
 match = "main"
 
