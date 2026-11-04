@@ -11,7 +11,7 @@ this package is the idiomatic answer. Data covers Formula 1 and other series.
 RaceHooks provides **predictive models and analytics for motorsport — race intelligence
 delivered to your endpoint.** You subscribe to feeds; RaceHooks **pushes signed JSON to your
 webhook URL** (no polling), or you can read an SSE stream. A REST API serves post-race model
-outputs, telemetry analytics, and historical results from 1950 to present. This SDK gives you a
+outputs and historical results from 1950 to present. This SDK gives you a
 typed REST client, HMAC webhook verification, Pydantic event models, and an optional gRPC
 streaming client.
 
@@ -83,7 +83,7 @@ rh.webhooks.deliveries(); rh.webhooks.rotate_secret(webhook_id); rh.webhooks.del
 
 # Model outputs, data and history (decoded JSON `data`; plan-gated by the API)
 rh.insights.get_race("2026-bahrain-r1"); rh.models.manifest(); rh.lines.get(race_id)
-rh.data.get_race(race_id); rh.historical.results(2021, 22); rh.telemetry.get_race_summary(race_id)
+rh.data.get_race(race_id); rh.historical.results(2021, 22)
 rh.usage.current(); rh.usage.subscription()
 
 for feed, payload in rh.stream(["events.race"]):   # SSE, no webhook server
@@ -91,7 +91,7 @@ for feed, payload in rh.stream(["events.race"]):   # SSE, no webhook server
 ```
 
 Fantasy, replay and webhook methods return typed Pydantic models; the data/insights/historical/
-telemetry/models/lines/analytics/preview/strategy/usage namespaces return the decoded JSON `data`. On a non-2xx response the client raises
+models/lines/analytics/preview/strategy/usage namespaces return the decoded JSON `data`. On a non-2xx response the client raises
 `RaceHooksAPIError` (with `status_code` and `body`); auth failures raise `RaceHooksAuthError`.
 
 ## Verify every incoming payload (do NOT skip this)

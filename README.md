@@ -39,7 +39,7 @@ enforced by the API: a call above your plan raises `RaceHooksAPIError` with
 status 402 or 403.
 
 The fantasy, session-replay and webhook methods return typed Pydantic models.
-The data, historical, insights, telemetry, models, lines, analytics, preview,
+The data, historical, insights, models, lines, analytics, preview,
 strategy and usage namespaces return the decoded JSON `data` payload (`dict`
 or `list`); field names are listed in the
 [OpenAPI spec](https://api.racehooks.io/openapi.json).
@@ -94,17 +94,15 @@ rh.preview.upcoming()                       # next-session preview (detail depen
 rh.strategy.preview_next(); rh.strategy.recap("2026-monaco-r5")
 ```
 
-### Data, historical and telemetry
+### Data and historical
 
 ```python
 rh.data.list_drivers(search="ver", active=True)
 rh.data.get_race("2026-bahrain-r1")
-rh.data.get_race_telemetry_laps("2026-bahrain-r1", driver_id="max_verstappen", lap=12)
 rh.data.get_season_standings(2026)
 
 rh.historical.results(2021, 22)             # 1950 to present
 rh.historical.driver_career("lewis_hamilton")
-rh.telemetry.get_lap_comparison("2026-bahrain-r1", 20)
 rh.indycar.standings()
 ```
 
@@ -282,7 +280,6 @@ The `feed` discriminator is the canonical, hyphenated feed id:
 | `events.race` | `RaceEvent` | `event`, `lap`, `utc` |
 | `events.qualifying` | `QualifyingEvent` | `event`, `lap`, `utc` |
 | `session.timing` | `SessionTimingEvent` | `utc`, `lap`, `total_laps`, `track_status` |
-| `results.race-summary` | `RaceSummaryEvent` | `type`, `race_id`, telemetry summary fields |
 | `analytics.*` | `AnalyticsStrategy`, `AnalyticsRaceOdds`, `AnalyticsTruePace`, `AnalyticsGapProjection`, `AnalyticsWinningMargin`, `AnalyticsRaceDuration`, `AnalyticsRacePreview`, `AnalyticsTireStrategy`, `AnalyticsTeamPoints`, `AnalyticsChampionshipProbability`, `AnalyticsQualifying`, `AnalyticsSectorPace`, `AnalyticsBattle`, `AnalyticsPitWindow`, `AnalyticsTrackConditions`, `AnalyticsPitQuality` | per-feed (see `racehooks.models.feeds`) |
 | `weather.*` | `WeatherRainEvent` (rain-onset + rain-cleared), `WeatherForecastUpdate`, `WeatherTireMismatch`, `WeatherStrategyDivergence`, `WeatherCompoundCrossover` | per-feed |
 | anything else | `WebhookEvent` | — |

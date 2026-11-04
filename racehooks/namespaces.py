@@ -38,9 +38,8 @@ class _Namespace:
 
 
 class DataNamespace(_Namespace):
-    """Drivers, constructors, circuits, seasons, races and post-race telemetry
-    analytics (``/v1/data/*``). Available on every plan; timing fields and some
-    telemetry are gated by plan."""
+    """Drivers, constructors, circuits, seasons and races (``/v1/data/*``).
+    Available on every plan; timing fields are gated by plan."""
 
     def list_drivers(
         self,
@@ -196,9 +195,6 @@ class DataNamespace(_Namespace):
     def get_race_weather(self, race_id: str) -> Any:
         return self._get(f"/data/races/{race_id}/weather")
 
-    def get_race_summary(self, race_id: str) -> Any:
-        return self._get(f"/data/races/{race_id}/summary")
-
     def get_race_laps(
         self,
         race_id: str,
@@ -219,41 +215,6 @@ class DataNamespace(_Namespace):
     def get_driver_race_laps(self, race_id: str, driver_id: str) -> Any:
         """Every lap of one driver in one race (``/v1/data/races/{raceId}/laps/{driverId}``)."""
         return self._get(f"/data/races/{race_id}/laps/{driver_id}")
-
-    def get_race_telemetry_laps(
-        self,
-        race_id: str,
-        *,
-        series: Optional[str] = None,
-        driver_id: Optional[str] = None,
-        lap: Optional[int] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
-    ) -> Any:
-        return self._get(
-            f"/data/races/{race_id}/telemetry/laps",
-            series=series,
-            driverId=driver_id,
-            lap=lap,
-            limit=limit,
-            offset=offset,
-        )
-
-    def get_race_telemetry_stints(
-        self,
-        race_id: str,
-        *,
-        series: Optional[str] = None,
-        driver_id: Optional[str] = None,
-    ) -> Any:
-        return self._get(
-            f"/data/races/{race_id}/telemetry/stints",
-            series=series,
-            driverId=driver_id,
-        )
-
-    def get_race_telemetry_aggression(self, race_id: str) -> Any:
-        return self._get(f"/data/races/{race_id}/telemetry/aggression")
 
     def get_session_analytics(
         self,
@@ -478,33 +439,6 @@ class InsightsNamespace(_Namespace):
 
     def get_model_meta(self) -> Any:
         return self._get("/insights/model-meta")
-
-
-class TelemetryNamespace(_Namespace):
-    """Post-session per-lap telemetry analytics (``/v1/telemetry/*``)."""
-
-    def get_race_laps(
-        self,
-        race_id: str,
-        *,
-        driver_id: Optional[str] = None,
-        lap_number: Optional[int] = None,
-    ) -> Any:
-        return self._get(
-            f"/telemetry/races/{race_id}/laps",
-            driverId=driver_id,
-            lapNumber=lap_number,
-        )
-
-    def get_driver_laps(self, race_id: str, driver_id: str) -> Any:
-        return self._get(f"/telemetry/races/{race_id}/drivers/{driver_id}/laps")
-
-    def get_lap_comparison(self, race_id: str, lap_number: int) -> Any:
-        """All drivers for one lap, for cross-driver comparison."""
-        return self._get(f"/telemetry/races/{race_id}/laps/{lap_number}")
-
-    def get_race_summary(self, race_id: str) -> Any:
-        return self._get(f"/telemetry/races/{race_id}/summary")
 
 
 class ModelsNamespace(_Namespace):

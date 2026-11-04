@@ -10,7 +10,6 @@ from racehooks import (
     LapCount,
     QualifyingEvent,
     RaceEvent,
-    RaceSummaryEvent,
     SessionTimingEvent,
     TrackStatus,
     WeatherData,
@@ -95,25 +94,6 @@ def test_parse_session_timing_specializes():
     assert event.track_status == "green"
     # Unknown extra fields are preserved via extra="allow".
     assert event.remaining == "01:28:00"
-
-
-def test_parse_results_race_summary_by_type_discriminator():
-    # results.race-summary predates the feed envelope — dispatched on `type`.
-    payload = {
-        "type": "race.summary.complete",
-        "raceId": "2026-bahrain-r1",
-        "raceName": "Bahrain Grand Prix",
-        "processedAt": "2026-03-16T17:30:00Z",
-        "totalSamples": 123456,
-        "maxSpeedKph": 342.1,
-        "maxSpeedDriver": _driver_ref("1"),
-    }
-    event = parse_event(payload)
-    assert isinstance(event, RaceSummaryEvent)
-    assert event.feed == "results.race-summary"
-    assert event.race_id == "2026-bahrain-r1"
-    assert event.total_samples == 123456
-    assert event.max_speed_driver.tla == "VER"
 
 
 def test_parse_event_accepts_bytes():

@@ -69,7 +69,6 @@ from .models import (
     RaceControlMessages,
     RaceEvent,
     RaceScores,
-    RaceSummaryEvent,
     ReplayMeta,
     SessionPitTimes,
     SessionScores,
@@ -137,7 +136,6 @@ __all__ = [
     "RaceEvent",
     "QualifyingEvent",
     "SessionTimingEvent",
-    "RaceSummaryEvent",
     "AnyEvent",
     # shared
     "DriverRef",

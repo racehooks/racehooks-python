@@ -46,11 +46,6 @@ def _router(seen: List[httpx.Request], body):
             "/v1/data/drivers",
             {"search": "ver", "active": "true", "limit": "5"},
         ),
-        (
-            lambda rh: rh.data.get_race_telemetry_laps("r1", driver_id="d", lap=3),
-            "/v1/data/races/r1/telemetry/laps",
-            {"driverId": "d", "lap": "3"},
-        ),
         (lambda rh: rh.historical.results(2021, 22), "/v1/historical/2021/22/results", {}),
         (
             lambda rh: rh.historical.driver_standings(2021, 5),
@@ -60,7 +55,6 @@ def _router(seen: List[httpx.Request], body):
         (lambda rh: rh.historical.driver_standings(2021), "/v1/historical/2021/driverStandings", {}),
         (lambda rh: rh.insights.get_race("r1"), "/v1/insights/races/r1", {}),
         (lambda rh: rh.insights.get_model_meta(), "/v1/insights/model-meta", {}),
-        (lambda rh: rh.telemetry.get_lap_comparison("r1", 20), "/v1/telemetry/races/r1/laps/20", {}),
         (lambda rh: rh.models.manifest(), "/v1/models/manifest", {}),
         (
             lambda rh: rh.lines.get("r1", checkpoint="q_end", market="winner"),
