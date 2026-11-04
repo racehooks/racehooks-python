@@ -20,7 +20,7 @@ falling back to :class:`WebhookEvent` for feeds without a dedicated class.
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -112,12 +112,52 @@ class SessionTimingEvent(WebhookEvent):
     track_status: Optional[str] = Field(default=None, alias="trackStatus")
 
 
+class PitStopEvent(WebhookEvent):
+    """``pit.stops`` — one completed pit stop: ``data`` carries ``driver``
+    (:class:`DriverRef`), ``lap``, ``pitStopTimeMs`` and ``pitLaneTimeMs``."""
+
+    feed: str = "pit.stops"
+    utc: Optional[str] = None
+
+
+class SessionClockEvent(WebhookEvent):
+    """``session.clock`` — ``data`` carries ``clockUtc``, ``remaining`` and ``extrapolating``."""
+
+    feed: str = "session.clock"
+    utc: Optional[str] = None
+
+
+class SessionInfoEvent(WebhookEvent):
+    """``session.info`` — ``data`` carries ``sessionType``, ``sessionName``, ``startDate``,
+    ``endDate``, ``gmtOffset``, ``eventName``, ``officialName``, ``location``, ``country`` and ``circuit``."""
+
+    feed: str = "session.info"
+    utc: Optional[str] = None
+
+
+class TrackPositionEvent(WebhookEvent):
+    """``telemetry.track-position`` — ``{ feed, sessionId, lap, utc, estimates }``.
+
+    Each estimate is a per-driver dict (``driver``, ``lap``, ``arc``, ``lapFraction``,
+    ``x``, ``y``, ``v``, ``stdM``, ``regime``, ``ageMs``), kept raw.
+    """
+
+    feed: str = "telemetry.track-position"
+    utc: Optional[str] = None
+    lap: Optional[int] = None
+    estimates: List[Dict[str, Any]] = Field(default_factory=list)
+
+
 # Canonical feed ids that get a dedicated envelope model. Everything else is
 # parsed as the generic :class:`WebhookEvent`.
 _EVENT_MODELS: Dict[str, Any] = {
     "events.race": RaceEvent,
     "events.qualifying": QualifyingEvent,
     "session.timing": SessionTimingEvent,
+    "pit.stops": PitStopEvent,
+    "session.clock": SessionClockEvent,
+    "session.info": SessionInfoEvent,
+    "telemetry.track-position": TrackPositionEvent,
     "analytics.strategy": AnalyticsStrategy,
     "analytics.race-odds": AnalyticsRaceOdds,
     "analytics.true-pace": AnalyticsTruePace,
@@ -146,6 +186,10 @@ AnyEvent = Union[
     RaceEvent,
     QualifyingEvent,
     SessionTimingEvent,
+    PitStopEvent,
+    SessionClockEvent,
+    SessionInfoEvent,
+    TrackPositionEvent,
     AnalyticsStrategy,
     AnalyticsRaceOdds,
     AnalyticsTruePace,
@@ -198,6 +242,10 @@ __all__ = [
     "RaceEvent",
     "QualifyingEvent",
     "SessionTimingEvent",
+    "PitStopEvent",
+    "SessionClockEvent",
+    "SessionInfoEvent",
+    "TrackPositionEvent",
     "AnyEvent",
     "parse_event",
     "DriverRef",

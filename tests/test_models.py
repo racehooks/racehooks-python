@@ -455,3 +455,30 @@ def test_rest_resource_models():
     assert event.official_name.startswith("Formula 1")
     assert event.sessions[0].session_id == "2026-bahrain-r1_Race"
     assert event.sessions[0].gmt_offset == "+03:00"
+
+
+def test_feed_catalog_is_consistent():
+    from typing import get_args
+
+    from racehooks import FEED_CATALOG, FeedAvailability, FeedId
+
+    ids = [f.id for f in FEED_CATALOG]
+    assert len(ids) == len(set(ids)) == len(get_args(FeedId))
+    assert set(ids) == set(get_args(FeedId))
+    assert {f.tier for f in FEED_CATALOG} <= set(get_args(FeedAvailability))
+
+
+def test_parse_event_catalog_sample_feeds():
+    from racehooks import parse_event
+
+    clock = parse_event(
+        {
+            "feed": "session.clock",
+            "sessionId": "2026-canada_r",
+            "utc": "2026-10-05T18:11:28.642Z",
+            "data": {"clockUtc": "2026-05-24T20:09:48.004Z", "remaining": "01:59:59", "extrapolating": True},
+        }
+    )
+    assert type(clock).__name__ == "SessionClockEvent" and clock.data["remaining"] == "01:59:59"
+    pos = parse_event({"feed": "telemetry.track-position", "sessionId": "s", "lap": 29, "estimates": [{"driver": "1"}]})
+    assert type(pos).__name__ == "TrackPositionEvent" and pos.lap == 29

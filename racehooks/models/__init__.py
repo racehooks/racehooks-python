@@ -1,5 +1,13 @@
 """RaceHooks Pydantic models."""
 
+from ._feed_catalog import (
+    FEED_CATALOG,
+    FEED_CATALOG_HASH,
+    FeedAvailability,
+    FeedCatalogEntry,
+    FeedFamily,
+    FeedId,
+)
 from .common import DriverRef, ReplayMeta
 from .events import (
     AnalyticsBattle,
@@ -22,6 +30,10 @@ from .events import (
     QualifyingEvent,
     RaceEvent,
     SessionTimingEvent,
+    PitStopEvent,
+    SessionClockEvent,
+    SessionInfoEvent,
+    TrackPositionEvent,
     WebhookEvent,
     WeatherCompoundCrossover,
     WeatherForecastUpdate,
@@ -88,6 +100,16 @@ __all__ = [
     "RaceEvent",
     "QualifyingEvent",
     "SessionTimingEvent",
+    "PitStopEvent",
+    "SessionClockEvent",
+    "SessionInfoEvent",
+    "TrackPositionEvent",
+    "FEED_CATALOG",
+    "FEED_CATALOG_HASH",
+    "FeedAvailability",
+    "FeedCatalogEntry",
+    "FeedFamily",
+    "FeedId",
     "WebhookEvent",
     "parse_event",
     # raw feed data models
