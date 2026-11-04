@@ -11,8 +11,6 @@ Envelope shapes mirror the canonical contract (the published Node SDK):
   ``{ feed, sessionId, event, lap, utc, data }`` — a discriminated union keyed
   on ``event`` (e.g. ``"overtake"``, ``"safety.car.deployed"``).
 * ``session.timing``: ``{ feed, sessionId, utc, ...trackerFields }``
-* ``results.race-summary``: predates the ``feed`` envelope; carries a ``type``
-  discriminator (``"race.summary.complete"``).
 * Derived analytics + weather feeds: see :mod:`racehooks.models.feeds`.
 
 :func:`parse_event` deserializes a raw payload into the most specific model,
@@ -22,7 +20,7 @@ falling back to :class:`WebhookEvent` for feeds without a dedicated class.
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -114,26 +112,40 @@ class SessionTimingEvent(WebhookEvent):
     track_status: Optional[str] = Field(default=None, alias="trackStatus")
 
 
-class RaceSummaryEvent(WebhookEvent):
-    """``results.race-summary`` — post-race telemetry summary (once, after CarData).
+class PitStopEvent(WebhookEvent):
+    """``pit.stops`` — one completed pit stop: ``data`` carries ``driver``
+    (:class:`DriverRef`), ``lap``, ``pitStopTimeMs`` and ``pitLaneTimeMs``."""
 
-    This delivery predates the standard ``feed`` envelope and instead carries a
-    ``type`` discriminator (``"race.summary.complete"``). Top-level fields mirror
-    the canonical ``RaceSummaryPayload``.
+    feed: str = "pit.stops"
+    utc: Optional[str] = None
+
+
+class SessionClockEvent(WebhookEvent):
+    """``session.clock`` — ``data`` carries ``clockUtc``, ``remaining`` and ``extrapolating``."""
+
+    feed: str = "session.clock"
+    utc: Optional[str] = None
+
+
+class SessionInfoEvent(WebhookEvent):
+    """``session.info`` — ``data`` carries ``sessionType``, ``sessionName``, ``startDate``,
+    ``endDate``, ``gmtOffset``, ``eventName``, ``officialName``, ``location``, ``country`` and ``circuit``."""
+
+    feed: str = "session.info"
+    utc: Optional[str] = None
+
+
+class TrackPositionEvent(WebhookEvent):
+    """``telemetry.track-position`` — ``{ feed, sessionId, lap, utc, estimates }``.
+
+    Each estimate is a per-driver dict (``driver``, ``lap``, ``arc``, ``lapFraction``,
+    ``x``, ``y``, ``v``, ``stdM``, ``regime``, ``ageMs``), kept raw.
     """
 
-    feed: str = "results.race-summary"
-    type: Optional[str] = None
-    race_id: Optional[str] = Field(default=None, alias="raceId")
-    race_name: Optional[str] = Field(default=None, alias="raceName")
-    processed_at: Optional[str] = Field(default=None, alias="processedAt")
-    total_samples: Optional[int] = Field(default=None, alias="totalSamples")
-    max_speed_kph: Optional[float] = Field(default=None, alias="maxSpeedKph")
-    max_speed_driver: Optional[DriverRef] = Field(default=None, alias="maxSpeedDriver")
-    avg_throttle_pct: Optional[float] = Field(default=None, alias="avgThrottlePct")
-    avg_brake_pct: Optional[float] = Field(default=None, alias="avgBrakePct")
-    top_aggression_driver: Optional[DriverRef] = Field(default=None, alias="topAggressionDriver")
-    top_aggression_score: Optional[float] = Field(default=None, alias="topAggressionScore")
+    feed: str = "telemetry.track-position"
+    utc: Optional[str] = None
+    lap: Optional[int] = None
+    estimates: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 # Canonical feed ids that get a dedicated envelope model. Everything else is
@@ -142,7 +154,10 @@ _EVENT_MODELS: Dict[str, Any] = {
     "events.race": RaceEvent,
     "events.qualifying": QualifyingEvent,
     "session.timing": SessionTimingEvent,
-    "results.race-summary": RaceSummaryEvent,
+    "pit.stops": PitStopEvent,
+    "session.clock": SessionClockEvent,
+    "session.info": SessionInfoEvent,
+    "telemetry.track-position": TrackPositionEvent,
     "analytics.strategy": AnalyticsStrategy,
     "analytics.race-odds": AnalyticsRaceOdds,
     "analytics.true-pace": AnalyticsTruePace,
@@ -171,7 +186,10 @@ AnyEvent = Union[
     RaceEvent,
     QualifyingEvent,
     SessionTimingEvent,
-    RaceSummaryEvent,
+    PitStopEvent,
+    SessionClockEvent,
+    SessionInfoEvent,
+    TrackPositionEvent,
     AnalyticsStrategy,
     AnalyticsRaceOdds,
     AnalyticsTruePace,
@@ -200,9 +218,7 @@ AnyEvent = Union[
 def parse_event(payload: Union[str, bytes, bytearray, Dict[str, Any]]) -> AnyEvent:
     """Parse a raw webhook payload into the most specific event model.
 
-    Dispatch is on the canonical ``feed`` discriminator. The
-    ``results.race-summary`` delivery predates the ``feed`` envelope and instead
-    carries ``type == "race.summary.complete"``; that shape is recognised too.
+    Dispatch is on the canonical ``feed`` discriminator.
 
     :param payload: Raw JSON ``str``/``bytes`` or an already-decoded ``dict``.
     :returns: The most specific :class:`AnyEvent` member, or generic
@@ -217,9 +233,6 @@ def parse_event(payload: Union[str, bytes, bytearray, Dict[str, Any]]) -> AnyEve
         raise ValueError("Webhook payload must be a JSON object")
 
     feed = data.get("feed")
-    if not feed and data.get("type") == "race.summary.complete":
-        return RaceSummaryEvent.model_validate(data)
-
     model = _EVENT_MODELS.get(feed or "", WebhookEvent)
     return model.model_validate(data)
 
@@ -229,7 +242,10 @@ __all__ = [
     "RaceEvent",
     "QualifyingEvent",
     "SessionTimingEvent",
-    "RaceSummaryEvent",
+    "PitStopEvent",
+    "SessionClockEvent",
+    "SessionInfoEvent",
+    "TrackPositionEvent",
     "AnyEvent",
     "parse_event",
     "DriverRef",

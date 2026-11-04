@@ -52,3 +52,19 @@ jobs:
           bash scripts/gen_proto.sh
           git diff --exit-code -- racehooks/grpc/_gen \
             || (echo "stubs out of date: run scripts/gen_proto.sh" && exit 1)
+
+  feed-catalog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify generated feed catalog is up to date
+        run: |
+          python scripts/gen_feed_catalog.py
+          git diff --exit-code -- racehooks/models/_feed_catalog.py \
+            || (echo "feed catalog out of date: run scripts/gen_feed_catalog.py" && exit 1)
+      # TODO: also compare catalog/feed-catalog.json contentHash against the monorepo's published
+      # catalog. No public URL serves it yet (GET /v1/feeds requires auth), so this check is not
+      # possible until one exists.

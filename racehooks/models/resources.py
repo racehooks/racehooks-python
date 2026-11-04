@@ -54,6 +54,8 @@ class Feed(_Resource):
     feed_id: Optional[str] = Field(default=None, alias="feedId")
     name: Optional[str] = None
     path: Optional[str] = None
+    #: Feed availability tier (see ``racehooks.FeedAvailability``: free, live, analytics, lap).
+    #: This is the feed tier, not your account plan. Kept as ``str`` so new tiers never break parsing.
     availability: Optional[str] = None
 
 

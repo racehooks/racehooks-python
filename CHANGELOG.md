@@ -2,6 +2,17 @@
 
 <!-- version list -->
 
+## Unreleased
+
+### Breaking Changes
+
+- Remove car telemetry client surface, following the API removal of `/v1/telemetry/*`,
+  `/v1/data/races/{raceId}/telemetry/*`, `/v1/data/races/{raceId}/summary` and the
+  `results.race-summary` webhook feed (racehooks#5025). Removed: `TelemetryNamespace` and
+  `client.telemetry`; `data.get_race_summary`, `data.get_race_telemetry_laps`,
+  `data.get_race_telemetry_stints`, `data.get_race_telemetry_aggression`; `RaceSummaryEvent` and
+  its `type == "race.summary.complete"` dispatch in `parse_event`.
+
 ## v0.7.0 (2026-10-29)
 
 ### Features

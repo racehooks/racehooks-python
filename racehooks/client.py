@@ -60,7 +60,6 @@ from .namespaces import (
     ModelsNamespace,
     PreviewNamespace,
     StrategyNamespace,
-    TelemetryNamespace,
     UsageNamespace,
     _data,
     _q,
@@ -148,7 +147,6 @@ class RaceHooks:
         self.historical = HistoricalNamespace(self)
         self.indycar = IndyCarNamespace(self)
         self.insights = InsightsNamespace(self)
-        self.telemetry = TelemetryNamespace(self)
         self.models = ModelsNamespace(self)
         self.lines = LinesNamespace(self)
         self.analytics = AnalyticsNamespace(self)
@@ -713,7 +711,6 @@ __all__: List[str] = [
     "HistoricalNamespace",
     "IndyCarNamespace",
     "InsightsNamespace",
-    "TelemetryNamespace",
     "ModelsNamespace",
     "LinesNamespace",
     "AnalyticsNamespace",
