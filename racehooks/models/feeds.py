@@ -170,7 +170,7 @@ class AnalyticsStrategy(_AnalyticsFeed):
 
 
 class AnalyticsRaceOdds(_AnalyticsFeed):
-    """``analytics.race-odds`` — per-lap CTMC outcome probabilities (race/sprint only).
+    """``analytics.race-odds`` — per-lap outcome probabilities (race/sprint only).
 
     Includes per-driver positionDistribution, podium/points odds, H2H vs teammate,
     and a top-level ``pairs`` array with same-constructor H2H probabilities.
@@ -193,7 +193,7 @@ class AnalyticsTruePace(_AnalyticsFeed):
 
 
 class AnalyticsGapProjection(_AnalyticsFeed):
-    """``analytics.gap-projection`` — Monte Carlo projected gap to race leader.
+    """``analytics.gap-projection`` — projected gap to race leader.
 
     Five percentile bands (p10–p90) plus P(lapped) per driver. Race/sprint only.
     """

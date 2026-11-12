@@ -511,7 +511,7 @@ class ModelsNamespace(_Namespace):
     """Public model manifest and scorecards (``/v1/models/*``)."""
 
     def manifest(self) -> Any:
-        """What each production model predicts, its calibration tier and last retrain."""
+        """The public model manifest: each model's id, label, feed and status."""
         return self._get("/models/manifest")
 
     def scorecard(self) -> Any:

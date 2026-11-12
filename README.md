@@ -84,7 +84,7 @@ rh.simulate.quota()                            # your tier's replay slots (-1 = 
 ```python
 rh.insights.list_races()                    # races with a completed post-race analytics run
 rh.insights.get_race("2026-bahrain-r1")     # per-driver per-lap model outputs (Developer+ for strategic predictions)
-rh.insights.get_model_meta()                # what each model predicts, calibration tier, last retrain
+rh.insights.get_model_meta()                # which models are published, and for which feed
 rh.models.manifest(); rh.models.scorecard(); rh.models.race_winner_record()
 
 rh.lines.list()                             # model-implied fair odds lines (Custom plan)
